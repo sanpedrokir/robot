@@ -52,7 +52,13 @@ export default function Home() {
     };
     recognition.onerror = (event) => {
       setMicOn(false);
-      if (event.error === "no-speech" || event.error === "aborted") return;
+      if (event.error === "aborted") return; // user clicked stop — no feedback needed
+      if (event.error === "no-speech") {
+        alert(
+          "Didn't hear anything. Check that your microphone isn't muted and that Windows hasn't blocked browser microphone access (Settings > Privacy & security > Microphone)."
+        );
+        return;
+      }
       alert(
         event.error === "not-allowed" || event.error === "service-not-allowed"
           ? "Microphone access was blocked. Allow it in your browser's site settings and try again."
