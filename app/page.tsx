@@ -19,6 +19,15 @@ export default function Home() {
     timers.current = [];
   }
 
+  function speak(text: string) {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel(); // stop anything still playing from a prior reply
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = () => setRobotState("idle");
+    utterance.onerror = () => setRobotState("idle");
+    window.speechSynthesis.speak(utterance);
+  }
+
   function toggleMic() {
     const SpeechRecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!SpeechRecognitionCtor) {
@@ -116,8 +125,17 @@ export default function Home() {
       ...prev,
       { id: Date.now() + 1, sender: "milo", text: replyText, files: replyFiles, whatsapp: replyWhatsapp },
     ]);
-    setRobotState(ok ? "speaking" : "idle");
-    timers.current.push(setTimeout(() => setRobotState("idle"), 1800));
+    if (ok) {
+      setRobotState("speaking");
+      speak(replyText);
+      // Safety net in case speechSynthesis never fires onend (e.g. unsupported
+      // browser or it silently fails) — sized to outlast a normal reading of
+      // the reply so it doesn't cut off the speaking animation mid-sentence.
+      const fallbackMs = Math.max(1800, replyText.length * 80);
+      timers.current.push(setTimeout(() => setRobotState("idle"), fallbackMs));
+    } else {
+      setRobotState("idle");
+    }
   }
 
   return (
