@@ -33,6 +33,15 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# personal data (phone numbers etc.) — never commit
+/data/contacts.json
+
+# whatsapp-web.js session — this IS a live login to a real WhatsApp
+# account. Committing it would let anyone with the repo send messages
+# from that account. Never commit.
+/.wwebjs_auth/
+/.wwebjs_cache/
+
 # vercel
 .vercel
 
