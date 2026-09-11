@@ -102,6 +102,8 @@ function startClient(): WhatsAppState {
   return state;
 }
 
+export const isWhatsAppAvailable = !isDisabled;
+
 export function getWhatsAppStatus() {
   const state = startClient();
   return { status: state.status, qrDataUrl: state.qrDataUrl, error: state.error };

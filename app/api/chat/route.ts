@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { searchFiles, type FileSearchArgs } from "@/lib/fileSearch";
 import { findContactNumber, buildWhatsAppLink } from "@/lib/contacts";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, isWhatsAppAvailable } from "@/lib/whatsapp";
 
 const MILO_INSTRUCTIONS = `You are Milo, a small friendly desktop AI robot.
 You are curious, helpful and slightly playful.
@@ -27,14 +27,23 @@ whole drive, and it cannot open, move, or delete anything — tell the user
 that if a search comes back empty or they ask for something outside that
 folder.
 
-You also have a send_whatsapp_message tool for when the user asks you to
+${
+  isWhatsAppAvailable
+    ? `You also have a send_whatsapp_message tool for when the user asks you to
 WhatsApp/message someone by name. When WhatsApp is connected, this tool
 sends the message for real, immediately — there is no review step, so only
 call it when you're confident about the contact name and the exact message
 text. Only tell the user a message was "sent" if the tool result says
 sent: true. If it says WhatsApp isn't connected yet, tell the user to open
 the WhatsApp panel in the app and scan the QR code first. If the contact
-name isn't found, tell the user and suggest they add that contact.`;
+name isn't found, tell the user and suggest they add that contact.`
+    : `WhatsApp messaging is NOT available in this deployment (it requires a
+persistent local session this environment can't provide). If the user asks
+you to send a WhatsApp message, tell them that plainly — don't suggest
+adding a contact or scanning a QR code, and don't imply it might work if
+they try again. It only works when Milo is run locally or on the robot
+itself.`
+}`;
 
 // This client is created on the server only. Because OPENAI_API_KEY has no
 // NEXT_PUBLIC_ prefix, Next.js never bundles it into client-side JavaScript.
@@ -76,28 +85,36 @@ const tools = [
     },
     strict: false,
   },
-  {
-    type: "function" as const,
-    name: "send_whatsapp_message",
-    description:
-      "Send a WhatsApp message to a named contact immediately, with no review step, if WhatsApp is connected. Falls back to a draft link if it isn't connected or the number isn't reachable.",
-    parameters: {
-      type: "object",
-      properties: {
-        contactName: {
-          type: "string",
-          description: "The friend's name, as the user referred to them, e.g. 'Norman'.",
+  // Only offered to the model when this deployment can actually act on it
+  // (see lib/whatsapp.ts) — otherwise Milo could "call" it and get a
+  // confusing tool-level failure instead of just explaining upfront that
+  // WhatsApp isn't available here.
+  ...(isWhatsAppAvailable
+    ? [
+        {
+          type: "function" as const,
+          name: "send_whatsapp_message",
+          description:
+            "Send a WhatsApp message to a named contact immediately, with no review step, if WhatsApp is connected. Falls back to a draft link if it isn't connected or the number isn't reachable.",
+          parameters: {
+            type: "object",
+            properties: {
+              contactName: {
+                type: "string",
+                description: "The friend's name, as the user referred to them, e.g. 'Norman'.",
+              },
+              message: {
+                type: "string",
+                description: "The exact message text to send.",
+              },
+            },
+            required: ["contactName", "message"],
+            additionalProperties: false,
+          },
+          strict: false,
         },
-        message: {
-          type: "string",
-          description: "The exact message text to send.",
-        },
-      },
-      required: ["contactName", "message"],
-      additionalProperties: false,
-    },
-    strict: false,
-  },
+      ]
+    : []),
 ];
 
 type WhatsAppOutcome = {
