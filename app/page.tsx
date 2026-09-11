@@ -11,27 +11,47 @@ export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [micOn, setMicOn] = useState(false);
+  const [conversationMode, setConversationModeState] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // Recognition callbacks are created once per listening session and need
+  // the up-to-date value, not the one closed over when they were set up —
+  // a ref sidesteps that stale-closure problem.
+  const conversationModeRef = useRef(false);
 
   function clearTimers() {
     timers.current.forEach(clearTimeout);
     timers.current = [];
   }
 
+  function setConversationMode(value: boolean) {
+    conversationModeRef.current = value;
+    setConversationModeState(value);
+  }
+
   function speak(text: string) {
-    if (!("speechSynthesis" in window)) return;
+    if (!("speechSynthesis" in window)) {
+      if (conversationModeRef.current) startListening();
+      return;
+    }
     window.speechSynthesis.cancel(); // stop anything still playing from a prior reply
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.onend = () => setRobotState("idle");
-    utterance.onerror = () => setRobotState("idle");
+    utterance.onend = () => {
+      setRobotState("idle");
+      if (conversationModeRef.current) startListening();
+    };
+    utterance.onerror = () => {
+      setRobotState("idle");
+      if (conversationModeRef.current) startListening();
+    };
     window.speechSynthesis.speak(utterance);
   }
 
-  function toggleMic() {
+  function startListening() {
     const SpeechRecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!SpeechRecognitionCtor) {
       alert("Sorry, your browser doesn't support voice input. Try Chrome or Edge.");
+      setConversationMode(false);
       return;
     }
 
@@ -42,11 +62,7 @@ export default function Home() {
       alert(
         "Voice input needs a secure connection. Open this page via https:// or http://localhost, not a plain IP address."
       );
-      return;
-    }
-
-    if (micOn) {
-      recognitionRef.current?.stop();
+      setConversationMode(false);
       return;
     }
 
@@ -63,11 +79,18 @@ export default function Home() {
       setMicOn(false);
       if (event.error === "aborted") return; // user clicked stop — no feedback needed
       if (event.error === "no-speech") {
-        alert(
-          "Didn't hear anything. Check that your microphone isn't muted and that Windows hasn't blocked browser microphone access (Settings > Privacy & security > Microphone)."
-        );
+        if (conversationModeRef.current) {
+          // Just a natural pause in the conversation — keep waiting instead
+          // of interrupting with a dialog every time the user goes quiet.
+          startListening();
+        } else {
+          alert(
+            "Didn't hear anything. Check that your microphone isn't muted and that Windows hasn't blocked browser microphone access (Settings > Privacy & security > Microphone)."
+          );
+        }
         return;
       }
+      setConversationMode(false);
       alert(
         event.error === "not-allowed" || event.error === "service-not-allowed"
           ? "Microphone access was blocked. Allow it in your browser's site settings and try again."
@@ -79,6 +102,19 @@ export default function Home() {
     recognitionRef.current = recognition;
     setMicOn(true);
     recognition.start();
+  }
+
+  function toggleMic() {
+    if (conversationModeRef.current) {
+      setConversationMode(false);
+      recognitionRef.current?.stop();
+      window.speechSynthesis?.cancel();
+      clearTimers();
+      setRobotState("idle");
+      return;
+    }
+    setConversationMode(true);
+    startListening();
   }
 
   async function handleSend(overrideText?: string) {
@@ -96,7 +132,6 @@ export default function Home() {
     let replyText: string;
     let replyFiles: string[] | undefined;
     let replyWhatsapp: ChatMessage["whatsapp"];
-    let ok = true;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -116,7 +151,6 @@ export default function Home() {
       replyFiles = data.files;
       replyWhatsapp = data.whatsapp;
     } catch {
-      ok = false;
       replyText = "Uh oh, my circuits glitched. Can you try that again?";
     }
 
@@ -125,17 +159,16 @@ export default function Home() {
       ...prev,
       { id: Date.now() + 1, sender: "milo", text: replyText, files: replyFiles, whatsapp: replyWhatsapp },
     ]);
-    if (ok) {
-      setRobotState("speaking");
-      speak(replyText);
-      // Safety net in case speechSynthesis never fires onend (e.g. unsupported
-      // browser or it silently fails) — sized to outlast a normal reading of
-      // the reply so it doesn't cut off the speaking animation mid-sentence.
-      const fallbackMs = Math.max(1800, replyText.length * 80);
-      timers.current.push(setTimeout(() => setRobotState("idle"), fallbackMs));
-    } else {
-      setRobotState("idle");
-    }
+    // Speak the reply either way (including the glitch message) so a
+    // hands-free conversation doesn't just stall silently on a failure —
+    // speak()'s onend/onerror is what resumes listening in that mode.
+    setRobotState("speaking");
+    speak(replyText);
+    // Safety net in case speechSynthesis never fires onend (e.g. unsupported
+    // browser or it silently fails) — sized to outlast a normal reading of
+    // the reply so it doesn't cut off the speaking animation mid-sentence.
+    const fallbackMs = Math.max(1800, replyText.length * 80);
+    timers.current.push(setTimeout(() => setRobotState("idle"), fallbackMs));
   }
 
   return (
@@ -159,9 +192,15 @@ export default function Home() {
         />
         <button
           onClick={toggleMic}
-          title={micOn ? "Listening… click to stop" : "Speak to Milo"}
+          title={
+            conversationMode
+              ? micOn
+                ? "Listening… click to end hands-free chat"
+                : "Hands-free chat is on — click to end"
+              : "Start hands-free voice chat with Milo"
+          }
           className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-            micOn ? "bg-red-500 text-white animate-pulse" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+            conversationMode ? "bg-red-500 text-white animate-pulse" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
           }`}
         >
           🎤
