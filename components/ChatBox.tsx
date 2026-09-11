@@ -43,7 +43,7 @@ export default function ChatBox({ messages }: { messages: ChatMessage[] }) {
     <div className="w-full max-w-md h-64 overflow-y-auto rounded-2xl border-2 border-slate-200 bg-white p-4 flex flex-col gap-2">
       {messages.length === 0 && (
         <p className="text-sm text-slate-400 text-center m-auto">
-          Say hello to Milo!
+          Say hello to Bobby!
         </p>
       )}
 

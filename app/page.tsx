@@ -138,7 +138,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           // Send the whole conversation so far, not just the latest message,
-          // so Milo can remember what was said earlier.
+          // so Bobby can remember what was said earlier.
           messages: history.map((m) => ({
             role: m.sender === "user" ? "user" : "assistant",
             content: m.text,
@@ -173,7 +173,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col flex-1 items-center gap-6 bg-zinc-50 py-10 px-4">
-      <h1 className="text-2xl font-bold text-slate-800">Milo the Robot</h1>
+      <h1 className="text-2xl font-bold text-slate-800">Bobby the Robot</h1>
 
       <RobotFace state={robotState} />
 
@@ -197,7 +197,7 @@ export default function Home() {
               ? micOn
                 ? "Listening… click to end hands-free chat"
                 : "Hands-free chat is on — click to end"
-              : "Start hands-free voice chat with Milo"
+              : "Start hands-free voice chat with Bobby"
           }
           className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
             conversationMode ? "bg-red-500 text-white animate-pulse" : "bg-slate-200 text-slate-700 hover:bg-slate-300"

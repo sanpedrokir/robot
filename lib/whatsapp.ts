@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { isServerlessHosting } from "./runtimeEnv";
 
 // A real, persistently logged-in WhatsApp Web session, driven by an
-// unofficial library (whatsapp-web.js -> Puppeteer). This lets Milo send
+// unofficial library (whatsapp-web.js -> Puppeteer). This lets Bobby send
 // WhatsApp messages autonomously, with no human review step — that's a
 // deliberate, explicit choice the user made, understanding the tradeoffs:
 // it's against WhatsApp's Terms of Service and risks the account being

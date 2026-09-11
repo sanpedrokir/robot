@@ -5,7 +5,7 @@ import path from "path";
 // Deliberately restricted:
 //  - Only walks the user's home folder, never the whole C:\ drive. A full
 //    drive scan would be slow, would trip over permission errors on system
-//    folders, and would let Milo see files it has no business seeing.
+//    folders, and would let Bobby see files it has no business seeing.
 //  - Read-only: it can only report paths it finds, it never opens, moves,
 //    or deletes anything itself (opening is a separate, user-clicked step
 //    — see resolveWithinHome below).

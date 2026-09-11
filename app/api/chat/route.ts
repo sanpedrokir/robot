@@ -4,7 +4,7 @@ import { searchFiles, type FileSearchArgs } from "@/lib/fileSearch";
 import { findContactNumber, buildWhatsAppLink } from "@/lib/contacts";
 import { sendWhatsAppMessage, isWhatsAppAvailable } from "@/lib/whatsapp";
 
-const MILO_INSTRUCTIONS = `You are Milo, a small friendly desktop AI robot.
+const BOBBY_INSTRUCTIONS = `You are Bobby, a small friendly desktop AI robot.
 You are curious, helpful and slightly playful.
 Keep your responses short and conversational.
 You enjoy helping your human learn and build things.
@@ -47,7 +47,7 @@ name isn't found, tell the user and suggest they add that contact.`
 persistent local session this environment can't provide). If the user asks
 you to send a WhatsApp message, tell them that plainly — don't suggest
 adding a contact or scanning a QR code, and don't imply it might work if
-they try again. It only works when Milo is run locally or on the robot
+they try again. It only works when Bobby is run locally or on the robot
 itself.`
 }`;
 
@@ -92,7 +92,7 @@ const tools = [
     strict: false,
   },
   // Only offered to the model when this deployment can actually act on it
-  // (see lib/whatsapp.ts) — otherwise Milo could "call" it and get a
+  // (see lib/whatsapp.ts) — otherwise Bobby could "call" it and get a
   // confusing tool-level failure instead of just explaining upfront that
   // WhatsApp isn't available here.
   ...(isWhatsAppAvailable
@@ -147,16 +147,16 @@ export async function POST(request: Request) {
     }
 
     // Passing the whole conversation as `input` (instead of one string) is
-    // what gives Milo memory of earlier turns — OpenAI sees the full
+    // what gives Bobby memory of earlier turns — OpenAI sees the full
     // back-and-forth on every call, not just the latest message.
     let response = await client.responses.create({
       model: "gpt-5.6-luna",
-      instructions: MILO_INSTRUCTIONS,
+      instructions: BOBBY_INSTRUCTIONS,
       input: messages,
       tools,
     });
 
-    // If Milo called a tool, run the real action on our server and hand
+    // If Bobby called a tool, run the real action on our server and hand
     // the actual result back so it can answer with real data instead of
     // just telling the user how to do it themselves. We also keep the
     // last search/link results to send to the client as clickable links.
@@ -226,7 +226,7 @@ export async function POST(request: Request) {
 
       response = await client.responses.create({
         model: "gpt-5.6-luna",
-        instructions: MILO_INSTRUCTIONS,
+        instructions: BOBBY_INSTRUCTIONS,
         previous_response_id: response.id,
         input: toolOutputs,
         tools,
@@ -239,9 +239,9 @@ export async function POST(request: Request) {
       whatsapp: lastWhatsapp ?? undefined,
     });
   } catch (error) {
-    console.error("Milo chat error:", error);
+    console.error("Bobby chat error:", error);
     return NextResponse.json(
-      { error: "Milo couldn't think of a reply. Please try again." },
+      { error: "Bobby couldn't think of a reply. Please try again." },
       { status: 500 }
     );
   }
