@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Status = "idle" | "starting" | "qr" | "ready" | "error";
+type Status = "idle" | "starting" | "qr" | "ready" | "error" | "disabled";
 
 export default function WhatsAppPanel() {
   const [status, setStatus] = useState<Status>("idle");
@@ -26,9 +26,9 @@ export default function WhatsAppPanel() {
     }
 
     poll();
-    // Stop polling once connected — nothing left to watch for.
+    // Stop polling once connected (or disabled) — nothing left to watch for.
     const interval = setInterval(() => {
-      if (status !== "ready") poll();
+      if (status !== "ready" && status !== "disabled") poll();
     }, 3000);
 
     return () => {
@@ -36,6 +36,10 @@ export default function WhatsAppPanel() {
       clearInterval(interval);
     };
   }, [status]);
+
+  if (status === "disabled") {
+    return null;
+  }
 
   if (status === "ready") {
     return (

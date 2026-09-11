@@ -11,7 +11,7 @@ import QRCode from "qrcode";
 // The login session lives in .wwebjs_auth/ (gitignored — never commit it,
 // it's equivalent to a live login credential for the linked account).
 
-type WhatsAppStatus = "idle" | "starting" | "qr" | "ready" | "error";
+type WhatsAppStatus = "idle" | "starting" | "qr" | "ready" | "error" | "disabled";
 
 type WhatsAppState = {
   client: Client | null;
@@ -36,8 +36,19 @@ function getState(): WhatsAppState {
   return globalForWhatsApp.__miloWhatsApp;
 }
 
+// whatsapp-web.js needs a real, persistently-running headless Chrome plus an
+// on-disk login session that survives between requests — neither of which
+// exist on serverless hosting (e.g. AWS Amplify's Lambda-based SSR compute).
+// Set DISABLE_WHATSAPP=true there so it doesn't try (and fail) to launch
+// Puppeteer on every poll; it still works when run on a persistent machine.
+const isDisabled = process.env.DISABLE_WHATSAPP === "true";
+
 function startClient(): WhatsAppState {
   const state = getState();
+  if (isDisabled) {
+    state.status = "disabled";
+    return state;
+  }
   if (state.client) return state;
 
   state.status = "starting";
@@ -95,6 +106,9 @@ export async function sendWhatsAppMessage(
   message: string
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const state = startClient();
+  if (state.status === "disabled") {
+    return { ok: false, reason: "WhatsApp isn't available on this deployment." };
+  }
   if (state.status !== "ready" || !state.client) {
     return { ok: false, reason: "WhatsApp isn't connected yet — scan the QR code first." };
   }
