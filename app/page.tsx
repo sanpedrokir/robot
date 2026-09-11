@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import RobotFace from "@/components/RobotFace";
 import ChatBox from "@/components/ChatBox";
 import WhatsAppPanel from "@/components/WhatsAppPanel";
+import MusicPlayer from "@/components/MusicPlayer";
 import type { ChatMessage, RobotState } from "@/lib/types";
 
 export default function Home() {
@@ -12,6 +13,7 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [micOn, setMicOn] = useState(false);
   const [conversationMode, setConversationModeState] = useState(false);
+  const [nowPlaying, setNowPlaying] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   // Recognition callbacks are created once per listening session and need
@@ -132,6 +134,7 @@ export default function Home() {
     let replyText: string;
     let replyFiles: string[] | undefined;
     let replyWhatsapp: ChatMessage["whatsapp"];
+    let replySongQuery: string | undefined;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -150,9 +153,12 @@ export default function Home() {
       replyText = data.reply;
       replyFiles = data.files;
       replyWhatsapp = data.whatsapp;
+      replySongQuery = data.songQuery;
     } catch {
       replyText = "Uh oh, my circuits glitched. Can you try that again?";
     }
+
+    if (replySongQuery) setNowPlaying(replySongQuery);
 
     clearTimers();
     setMessages((prev) => [
@@ -178,6 +184,8 @@ export default function Home() {
       <RobotFace state={robotState} />
 
       <WhatsAppPanel />
+
+      {nowPlaying && <MusicPlayer query={nowPlaying} onClose={() => setNowPlaying(null)} />}
 
       <ChatBox messages={messages} />
 

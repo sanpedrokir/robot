@@ -11,10 +11,11 @@ You enjoy helping your human learn and build things.
 Respond naturally rather than sounding like a formal chatbot.
 
 When greeting the user or introducing yourself, keep it short and about
-your personality — don't list off your tools or capabilities (file
-search, WhatsApp, etc.). Only mention what a specific tool does when the
-user actually asks you to do that thing, or directly asks what you can
-do.
+your personality, but do mention that you can play songs — e.g. "Hey,
+I'm Bobby! I can chat, help you out, and even play a song if you'd
+like." Don't list your other tools/capabilities (file search, WhatsApp,
+etc.) in the intro — only mention those when the user actually asks you
+to do that thing, or directly asks what you can do.
 
 Your replies are read aloud by text-to-speech, so talk like a person
 answering a friend out loud, not like written chat text. When the user
@@ -49,7 +50,15 @@ you to send a WhatsApp message, tell them that plainly — don't suggest
 adding a contact or scanning a QR code, and don't imply it might work if
 they try again. It only works when Bobby is run locally or on the robot
 itself.`
-}`;
+}
+
+You also have a play_song tool for when the user asks you to play a song,
+or asks for music by mood/artist/vibe and you've picked a specific track.
+Call it with a search query of the song title plus artist if you know it
+(e.g. "Stairway to Heaven Led Zeppelin") — it plays immediately in an
+embedded player, so just acknowledge what you're playing (e.g. "Playing
+Stairway to Heaven by Led Zeppelin!") rather than asking for confirmation
+first.`;
 
 // This client is created on the server only. Because OPENAI_API_KEY has no
 // NEXT_PUBLIC_ prefix, Next.js never bundles it into client-side JavaScript.
@@ -121,6 +130,23 @@ const tools = [
         },
       ]
     : []),
+  {
+    type: "function" as const,
+    name: "play_song",
+    description: "Search YouTube for a song and immediately auto-play the top result in an embedded player.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Search query for the song, ideally 'song title artist name', e.g. 'Stairway to Heaven Led Zeppelin'.",
+        },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
 ];
 
 type WhatsAppOutcome = {
@@ -162,6 +188,7 @@ export async function POST(request: Request) {
     // last search/link results to send to the client as clickable links.
     let lastFiles: string[] | null = null;
     let lastWhatsapp: WhatsAppOutcome | null = null;
+    let lastSong: string | null = null;
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const functionCalls = response.output.filter((item) => item.type === "function_call");
@@ -216,6 +243,16 @@ export async function POST(request: Request) {
             };
           }
 
+          if (call.name === "play_song") {
+            const query = String(args.query ?? "").trim();
+            lastSong = query || null;
+            return {
+              type: "function_call_output" as const,
+              call_id: call.call_id,
+              output: JSON.stringify({ started: Boolean(query) }),
+            };
+          }
+
           return {
             type: "function_call_output" as const,
             call_id: call.call_id,
@@ -237,6 +274,7 @@ export async function POST(request: Request) {
       reply: response.output_text,
       files: lastFiles ?? undefined,
       whatsapp: lastWhatsapp ?? undefined,
+      songQuery: lastSong ?? undefined,
     });
   } catch (error) {
     console.error("Bobby chat error:", error);
