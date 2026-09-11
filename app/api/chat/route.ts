@@ -3,7 +3,6 @@ import OpenAI from "openai";
 import { searchFiles, type FileSearchArgs } from "@/lib/fileSearch";
 import { findContactNumber, buildWhatsAppLink } from "@/lib/contacts";
 import { sendWhatsAppMessage, isWhatsAppAvailable } from "@/lib/whatsapp";
-import { submitFeedbackForm, isFeedbackFormAvailable } from "@/lib/feedbackForm";
 
 const MILO_INSTRUCTIONS = `You are Milo, a small friendly desktop AI robot.
 You are curious, helpful and slightly playful.
@@ -50,30 +49,6 @@ you to send a WhatsApp message, tell them that plainly — don't suggest
 adding a contact or scanning a QR code, and don't imply it might work if
 they try again. It only works when Milo is run locally or on the robot
 itself.`
-}
-
-${
-  isFeedbackFormAvailable
-    ? `You also have a submit_feedback_form tool for when the user says
-something like "I want to give feedback" or "I want to raise a service
-request". This fills out and submits a real government feedback form
-immediately, with no separate review step — you are the review step, so
-follow this exactly:
-1. Ask for the three fields ONE AT A TIME, in this order: full name, then
-   email address, then the feedback detail — don't ask for all three at
-   once, since these come from spoken voice input and are easy to mishear.
-   The email will likely come in spoken form (e.g. "john dot smith at
-   gmail dot com") — always convert it to standard email format
-   (john.smith@gmail.com) before using it anywhere.
-2. Once you have all three, say them back naturally as part of your normal
-   acknowledgment (e.g. "Got it — submitting feedback from Jane Tan,
-   jane.tan@example.com...") and call submit_feedback_form right away in
-   the same turn — don't wait for a separate yes/confirm first.
-3. Report the result plainly based on what the tool returns — only say it
-   was submitted if the result says ok: true.`
-    : `Submitting feedback via the government feedback form is NOT available
-right now. If the user asks to give feedback or raise a service request,
-tell them that plainly instead of trying.`
 }`;
 
 // This client is created on the server only. Because OPENAI_API_KEY has no
@@ -140,36 +115,6 @@ const tools = [
               },
             },
             required: ["contactName", "message"],
-            additionalProperties: false,
-          },
-          strict: false,
-        },
-      ]
-    : []),
-  ...(isFeedbackFormAvailable
-    ? [
-        {
-          type: "function" as const,
-          name: "submit_feedback_form",
-          description:
-            "Submit the fixed government feedback form for real, immediately, with no review step — only call this once you have a full name, email, and feedback detail collected from the user.",
-          parameters: {
-            type: "object",
-            properties: {
-              name: {
-                type: "string",
-                description: "The user's full name, as they said it.",
-              },
-              email: {
-                type: "string",
-                description: "The user's email address, as they said/confirmed it.",
-              },
-              feedbackDetail: {
-                type: "string",
-                description: "The exact feedback/service-request detail text to submit.",
-              },
-            },
-            required: ["name", "email", "feedbackDetail"],
             additionalProperties: false,
           },
           strict: false,
@@ -264,19 +209,6 @@ export async function POST(request: Request) {
               }
             }
 
-            return {
-              type: "function_call_output" as const,
-              call_id: call.call_id,
-              output: JSON.stringify(result),
-            };
-          }
-
-          if (call.name === "submit_feedback_form") {
-            const result = await submitFeedbackForm({
-              name: String(args.name ?? ""),
-              email: String(args.email ?? ""),
-              feedbackDetail: String(args.feedbackDetail ?? ""),
-            });
             return {
               type: "function_call_output" as const,
               call_id: call.call_id,
