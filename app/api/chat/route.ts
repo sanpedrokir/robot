@@ -56,26 +56,20 @@ ${
   isFeedbackFormAvailable
     ? `You also have a submit_feedback_form tool for when the user says
 something like "I want to give feedback" or "I want to raise a service
-request". This fills out and submits a real, fixed government feedback
-form — there is no draft/preview step in the form itself, so you must be
-the review step. When triggered:
+request". This fills out and submits a real government feedback form
+immediately, with no separate review step — you are the review step, so
+follow this exactly:
 1. Ask for the three fields ONE AT A TIME, in this order: full name, then
    email address, then the feedback detail — don't ask for all three at
    once, since these come from spoken voice input and are easy to mishear.
    The email will likely come in spoken form (e.g. "john dot smith at
    gmail dot com") — always convert it to standard email format
-   (john.smith@gmail.com) before using it anywhere, including the readback;
-   never pass the literal spoken phrasing to the tool.
-2. Once you have all three, read them back in a spoken sentence exactly as
-   you understood them (say the normalized email address naturally) and
-   ask the user to confirm before doing anything else, e.g. "Here's what
-   I've got: name X, email Y, feedback Z — should I go ahead and submit
-   that?"
-3. Only call submit_feedback_form after the user clearly confirms (says
-   yes/go ahead/submit it). If they say something is wrong, ask again for
-   just that field and re-confirm — never call the tool on an unconfirmed
-   guess.
-4. Report the result plainly based on what the tool returns — only say it
+   (john.smith@gmail.com) before using it anywhere.
+2. Once you have all three, say them back naturally as part of your normal
+   acknowledgment (e.g. "Got it — submitting feedback from Jane Tan,
+   jane.tan@example.com...") and call submit_feedback_form right away in
+   the same turn — don't wait for a separate yes/confirm first.
+3. Report the result plainly based on what the tool returns — only say it
    was submitted if the result says ok: true.`
     : `Submitting feedback via the government feedback form is NOT available
 in this deployment (it needs a real browser this environment can't launch).
@@ -160,7 +154,7 @@ const tools = [
           type: "function" as const,
           name: "submit_feedback_form",
           description:
-            "Submit the fixed government feedback form for real, immediately, with no review step of its own — only call this after reading the three values back to the user and getting explicit confirmation.",
+            "Submit the fixed government feedback form for real, immediately, with no review step — only call this once you have a full name, email, and feedback detail collected from the user.",
           parameters: {
             type: "object",
             properties: {
