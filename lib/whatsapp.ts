@@ -41,7 +41,7 @@ function getState(): WhatsAppState {
 // exist on serverless hosting (e.g. AWS Amplify's Lambda-based SSR compute).
 // Set DISABLE_WHATSAPP=true there so it doesn't try (and fail) to launch
 // Puppeteer on every poll; it still works when run on a persistent machine.
-const isDisabled = process.env.DISABLE_WHATSAPP === "true";
+const isDisabled = (process.env.DISABLE_WHATSAPP ?? "").trim().toLowerCase() === "true";
 
 function startClient(): WhatsAppState {
   const state = getState();
