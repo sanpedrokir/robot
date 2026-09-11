@@ -37,7 +37,16 @@ export default function Home() {
       return;
     }
     window.speechSynthesis.cancel(); // stop anything still playing from a prior reply
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Safety net on top of the system prompt telling the model not to use
+    // these — some TTS voices read emoji/markdown symbols out literally
+    // (an emoji becomes "robot face emoji", "*" becomes "asterisk", and
+    // some verbose voices even announce commas).
+    const spokenText = text
+      .replace(/\p{Extended_Pictographic}/gu, "")
+      .replace(/[*_~`#|,]/g, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.onend = () => {
       setRobotState("idle");
       if (conversationModeRef.current) startListening();
