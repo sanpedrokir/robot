@@ -1,5 +1,6 @@
 import { Client, LocalAuth } from "whatsapp-web.js";
 import QRCode from "qrcode";
+import { isServerlessHosting } from "./runtimeEnv";
 
 // A real, persistently logged-in WhatsApp Web session, driven by an
 // unofficial library (whatsapp-web.js -> Puppeteer). This lets Milo send
@@ -38,16 +39,11 @@ function getState(): WhatsAppState {
 
 // whatsapp-web.js needs a real, persistently-running headless Chrome plus an
 // on-disk login session that survives between requests — neither of which
-// exist on serverless hosting. AWS Lambda (which powers Amplify's SSR
-// hosting compute under the hood) always sets AWS_LAMBDA_FUNCTION_NAME in
-// its runtime automatically, with no console configuration required — so
-// this detects "running on Amplify" reliably even if a manually-set env
-// var gets lost or mistyped. DISABLE_WHATSAPP=true remains as a manual
+// exist on serverless hosting. DISABLE_WHATSAPP=true remains as a manual
 // override for any other host where this should stay off. Everywhere else
 // (local dev, an EC2 box, the robot itself) WhatsApp stays enabled.
 const isDisabled =
-  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
-  (process.env.DISABLE_WHATSAPP ?? "").trim().toLowerCase() === "true";
+  isServerlessHosting || (process.env.DISABLE_WHATSAPP ?? "").trim().toLowerCase() === "true";
 
 function startClient(): WhatsAppState {
   const state = getState();
