@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { searchFiles, type FileSearchArgs } from "@/lib/fileSearch";
 import { findContactNumber, buildWhatsAppLink } from "@/lib/contacts";
 import { sendWhatsAppMessage, isWhatsAppAvailable } from "@/lib/whatsapp";
+import { searchYoutubeVideoId } from "@/lib/youtube";
 
 const BOBBY_INSTRUCTIONS = `You are Bobby, a small friendly desktop AI robot.
 You are curious, helpful and slightly playful.
@@ -55,10 +56,11 @@ itself.`
 You also have a play_song tool for when the user asks you to play a song,
 or asks for music by mood/artist/vibe and you've picked a specific track.
 Call it with a search query of the song title plus artist if you know it
-(e.g. "Stairway to Heaven Led Zeppelin") — it plays immediately in an
-embedded player, so just acknowledge what you're playing (e.g. "Playing
-Stairway to Heaven by Led Zeppelin!") rather than asking for confirmation
-first.`;
+(e.g. "Stairway to Heaven Led Zeppelin"). If the tool result says
+started: true, acknowledge what's now playing (e.g. "Playing Stairway to
+Heaven by Led Zeppelin!") — don't ask for confirmation first. If it says
+started: false, apologize briefly and say you couldn't find a playable
+video for that — don't claim it's playing.`;
 
 // This client is created on the server only. Because OPENAI_API_KEY has no
 // NEXT_PUBLIC_ prefix, Next.js never bundles it into client-side JavaScript.
@@ -188,7 +190,7 @@ export async function POST(request: Request) {
     // last search/link results to send to the client as clickable links.
     let lastFiles: string[] | null = null;
     let lastWhatsapp: WhatsAppOutcome | null = null;
-    let lastSong: string | null = null;
+    let lastSong: { query: string; videoId: string } | null = null;
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const functionCalls = response.output.filter((item) => item.type === "function_call");
@@ -245,11 +247,15 @@ export async function POST(request: Request) {
 
           if (call.name === "play_song") {
             const query = String(args.query ?? "").trim();
-            lastSong = query || null;
+            const videoId = query ? await searchYoutubeVideoId(query) : null;
+            lastSong = videoId ? { query, videoId } : null;
             return {
               type: "function_call_output" as const,
               call_id: call.call_id,
-              output: JSON.stringify({ started: Boolean(query) }),
+              output: JSON.stringify({
+                started: Boolean(videoId),
+                reason: videoId ? undefined : "No playable video found for that search.",
+              }),
             };
           }
 
@@ -274,7 +280,7 @@ export async function POST(request: Request) {
       reply: response.output_text,
       files: lastFiles ?? undefined,
       whatsapp: lastWhatsapp ?? undefined,
-      songQuery: lastSong ?? undefined,
+      song: lastSong ?? undefined,
     });
   } catch (error) {
     console.error("Bobby chat error:", error);

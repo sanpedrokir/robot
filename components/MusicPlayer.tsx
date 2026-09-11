@@ -1,4 +1,4 @@
-export default function MusicPlayer({ query, onClose }: { query: string; onClose: () => void }) {
+export default function MusicPlayer({ videoId, onClose }: { videoId: string; onClose: () => void }) {
   return (
     <div className="relative w-full max-w-md overflow-hidden rounded-2xl border-2 border-slate-200 bg-black">
       <button
@@ -8,15 +8,14 @@ export default function MusicPlayer({ query, onClose }: { query: string; onClose
       >
         ✕
       </button>
-      {/* listType=search + list=<query> makes YouTube's embed player search
-          and auto-play the top result — no API key/account needed. Keying
-          on the query forces a fresh iframe (and a fresh search) when the
-          song changes, rather than trying to update the src in place. */}
+      {/* A real, resolved video ID (via the YouTube Data API — see
+          lib/youtube.ts) embedded the standard, fully-supported way.
+          Keying on the id forces a fresh iframe when the song changes. */}
       <iframe
-        key={query}
+        key={videoId}
         width="100%"
         height="200"
-        src={`https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(query)}&autoplay=1`}
+        src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`}
         title="Now playing"
         allow="autoplay; encrypted-media"
         allowFullScreen
