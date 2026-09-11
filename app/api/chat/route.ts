@@ -72,10 +72,8 @@ follow this exactly:
 3. Report the result plainly based on what the tool returns — only say it
    was submitted if the result says ok: true.`
     : `Submitting feedback via the government feedback form is NOT available
-in this deployment (it needs a real browser this environment can't launch).
-If the user asks to give feedback or raise a service request, tell them
-that plainly instead of trying — it only works when Milo is run locally or
-on the robot itself.`
+right now. If the user asks to give feedback or raise a service request,
+tell them that plainly instead of trying.`
 }`;
 
 // This client is created on the server only. Because OPENAI_API_KEY has no

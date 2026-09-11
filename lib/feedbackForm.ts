@@ -1,4 +1,4 @@
-import puppeteer from "puppeteer";
+import type { Browser, ElementHandle } from "puppeteer-core";
 import { isServerlessHosting } from "./runtimeEnv";
 
 // This targets one specific, fixed FormSG form — its field IDs are stable
@@ -17,21 +17,42 @@ function byId(id: string) {
   return `[id="${id}"]`;
 }
 
-export const isFeedbackFormAvailable = !isServerlessHosting;
+// Unlike WhatsApp, this doesn't need a persistent session across requests —
+// just a Chrome binary for the few seconds it takes to fill and submit. AWS
+// Lambda (Amplify's SSR compute) has no bundled desktop Chrome, so there we
+// launch @sparticuz/chromium's Lambda-packaged binary via puppeteer-core
+// instead; everywhere else (local dev, EC2, the robot) the full `puppeteer`
+// package's own downloaded Chrome is simpler and works fine.
+async function launchBrowser(): Promise<Browser> {
+  if (isServerlessHosting) {
+    const chromium = (await import("@sparticuz/chromium")).default;
+    const puppeteerCore = await import("puppeteer-core");
+    return puppeteerCore.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    });
+  }
+
+  const puppeteer = (await import("puppeteer")).default;
+  return puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  }) as unknown as Promise<Browser>;
+}
+
+// @sparticuz/chromium on Amplify's Lambda runtime is untested in production
+// (verified locally and via documentation, not against real Amplify infra),
+// so keep a manual kill switch to disable it there without a code change if
+// it turns out not to work in practice — mirrors DISABLE_WHATSAPP.
+export const isFeedbackFormAvailable = (process.env.DISABLE_FEEDBACK_FORM ?? "").trim().toLowerCase() !== "true";
 
 export async function submitFeedbackForm(input: {
   name: string;
   email: string;
   feedbackDetail: string;
 }): Promise<{ ok: true } | { ok: false; reason: string }> {
-  if (isServerlessHosting) {
-    return { ok: false, reason: "Submitting feedback isn't available on this deployment." };
-  }
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();
@@ -45,7 +66,7 @@ export async function submitFeedbackForm(input: {
     const submitButton = await page.evaluateHandle(() =>
       [...document.querySelectorAll("button")].find((b) => b.innerText.includes("Submit now"))
     );
-    const buttonEl = submitButton.asElement();
+    const buttonEl = submitButton.asElement() as ElementHandle<Element> | null;
     if (!buttonEl) {
       return { ok: false, reason: "Couldn't find the form's submit button — its layout may have changed." };
     }
@@ -58,7 +79,7 @@ export async function submitFeedbackForm(input: {
       };
     }
 
-    await (buttonEl as import("puppeteer").ElementHandle<Element>).click();
+    await buttonEl.click();
 
     // FormSG shows a "Thank you" confirmation after a successful submit.
     const confirmed = await page
