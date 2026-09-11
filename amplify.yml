@@ -1,0 +1,22 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        # Console-configured env vars are only visible during the build, not
+        # to the running SSR compute function — writing them into
+        # .env.production here is AWS's documented way to carry them through
+        # to runtime (https://docs.aws.amazon.com/amplify/latest/userguide/ssr-environment-variables.html).
+        - env | grep -e OPENAI_API_KEY >> .env.production
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
