@@ -18,6 +18,7 @@ export default function Home() {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mouthTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fallbackFlapRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Recognition callbacks are created once per listening session and need
   // the up-to-date value, not the one closed over when they were set up —
   // a ref sidesteps that stale-closure problem.
@@ -93,11 +94,21 @@ export default function Home() {
       }, 8000);
     }
 
+    function stopFallbackFlap() {
+      if (fallbackFlapRef.current) {
+        clearInterval(fallbackFlapRef.current);
+        fallbackFlapRef.current = null;
+      }
+    }
+
     // Flap the mouth open briefly on each word/sentence boundary the
     // browser reports, instead of a fixed CSS animation running non-stop
     // for the whole speaking duration — this tracks actual speech rhythm
     // (including natural pauses) rather than a constant mechanical flap.
+    let boundaryFired = false;
     utterance.onboundary = () => {
+      boundaryFired = true;
+      stopFallbackFlap(); // this browser does support boundary events after all
       setMouthOpen(true);
       if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       mouthTimerRef.current = setTimeout(() => setMouthOpen(false), 150);
@@ -105,19 +116,43 @@ export default function Home() {
     };
     utterance.onend = () => {
       clearTimeout(watchdog);
-      setRobotState("idle");
+      stopFallbackFlap();
       setMouthOpen(false);
       if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
+      // A quick happy smile after finishing a reply, before settling back
+      // to idle.
+      setRobotState("happy");
+      timers.current.push(setTimeout(() => setRobotState("idle"), 1600));
       if (conversationModeRef.current) startListening();
     };
     utterance.onerror = () => {
       clearTimeout(watchdog);
+      stopFallbackFlap();
       setRobotState("idle");
       setMouthOpen(false);
       if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       if (conversationModeRef.current) startListening();
     };
     resetWatchdog(); // arm it up front in case boundary/end never fire at all
+
+    function startSpeaking() {
+      window.speechSynthesis.speak(utterance);
+      // Some browsers (notably mobile ones — Android Chrome's TTS engine
+      // support varies by device, and iOS Safari often doesn't fire it at
+      // all) never send onboundary events, which would otherwise leave the
+      // mouth permanently closed for the whole reply. If no boundary shows
+      // up shortly after speech starts, fall back to a plain timed flap
+      // instead — less precisely synced, but still moving.
+      timers.current.push(
+        setTimeout(() => {
+          if (!boundaryFired && !fallbackFlapRef.current) {
+            fallbackFlapRef.current = setInterval(() => {
+              setMouthOpen((prev) => !prev);
+            }, 220);
+          }
+        }, 500)
+      );
+    }
 
     // Chrome/Edge often report zero voices on the very first call of a
     // page load — getVoices() only populates after an internal async
@@ -129,7 +164,7 @@ export default function Home() {
     if (window.speechSynthesis.getVoices().length > 0) {
       const youthfulVoice = getYouthfulVoice();
       if (youthfulVoice) utterance.voice = youthfulVoice;
-      window.speechSynthesis.speak(utterance);
+      startSpeaking();
     } else {
       let spoken = false;
       const trySpeak = () => {
@@ -138,7 +173,7 @@ export default function Home() {
         window.speechSynthesis.removeEventListener("voiceschanged", trySpeak);
         const youthfulVoice = getYouthfulVoice();
         if (youthfulVoice) utterance.voice = youthfulVoice;
-        window.speechSynthesis.speak(utterance);
+        startSpeaking();
       };
       window.speechSynthesis.addEventListener("voiceschanged", trySpeak);
       // Safety net in case this browser never fires voiceschanged.
@@ -209,6 +244,11 @@ export default function Home() {
       recognitionRef.current?.stop();
       window.speechSynthesis?.cancel();
       clearTimers();
+      if (fallbackFlapRef.current) {
+        clearInterval(fallbackFlapRef.current);
+        fallbackFlapRef.current = null;
+      }
+      setMouthOpen(false);
       setRobotState("idle");
       return;
     }

@@ -17,7 +17,14 @@ export default function RobotFace({ state, mouthOpen }: { state: RobotState; mou
           state === "happy" ? "animate-happy-bounce" : "animate-float"
         }`}
       >
-        <Image src="/neo-avatar.png" alt="Neo" fill sizes="224px" priority className="object-cover" />
+        <Image
+          src={state === "happy" ? "/neo-avatar-smile.png" : "/neo-avatar.png"}
+          alt="Neo"
+          fill
+          sizes="224px"
+          priority
+          className="object-cover"
+        />
 
         {/* A second, mouth-open frame of the same portrait, layered exactly
             on top. Its visibility is driven by mouthOpen (toggled per
