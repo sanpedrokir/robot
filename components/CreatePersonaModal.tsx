@@ -26,8 +26,14 @@ export default function CreatePersonaModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description }),
       });
-      const data = await res.json();
+      let data: { closed?: string; smile?: string; talk?: string; error?: string };
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("The server didn't return a valid response — please try again.");
+      }
       if (!res.ok) throw new Error(data.error ?? "Generation failed.");
+      if (!data.closed || !data.smile || !data.talk) throw new Error("The server didn't return complete images.");
 
       const [closed, smile, talk] = await Promise.all([
         resizeDataUrl(data.closed),
