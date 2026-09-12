@@ -188,7 +188,6 @@ export default function Home() {
 
   return (
     <div className="flex flex-col flex-1 items-center gap-6 bg-zinc-50 py-10 px-4">
-      <h1 className="text-2xl font-bold text-slate-800">Bobby the Robot</h1>
 
       <RobotFace state={robotState} />
 
