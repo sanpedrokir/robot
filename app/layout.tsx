@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Neo the Robot",
-  description: "Neo, your friendly desktop AI robot assistant.",
+  description: "Neo, your handsome robot.",
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },

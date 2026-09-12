@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Neo the Robot",
     short_name: "Neo",
-    description: "Neo, your friendly desktop AI robot assistant.",
+    description: "Neo, your handsome robot.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
