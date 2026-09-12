@@ -66,8 +66,6 @@ export default function Home() {
       .replace(/\s{2,}/g, " ")
       .trim();
     const utterance = new SpeechSynthesisUtterance(spokenText);
-    const youthfulVoice = getYouthfulVoice();
-    if (youthfulVoice) utterance.voice = youthfulVoice;
     // A touch higher pitch and slightly quicker pace reads as younger and
     // more energetic on essentially any voice, regardless of which (if
     // any) named voice above was actually available on this system.
@@ -94,7 +92,32 @@ export default function Home() {
       if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       if (conversationModeRef.current) startListening();
     };
-    window.speechSynthesis.speak(utterance);
+
+    // Chrome/Edge often report zero voices on the very first call of a
+    // page load — getVoices() only populates after an internal async
+    // fetch completes, signaled by the "voiceschanged" event. Without
+    // waiting for that, the intro line silently falls back to the
+    // browser's raw default voice while every later reply (once voices
+    // have loaded) correctly gets the preferred one, making the intro
+    // sound like a different voice from the rest of the conversation.
+    if (window.speechSynthesis.getVoices().length > 0) {
+      const youthfulVoice = getYouthfulVoice();
+      if (youthfulVoice) utterance.voice = youthfulVoice;
+      window.speechSynthesis.speak(utterance);
+    } else {
+      let spoken = false;
+      const trySpeak = () => {
+        if (spoken) return; // the voiceschanged listener and the timeout below can both fire
+        spoken = true;
+        window.speechSynthesis.removeEventListener("voiceschanged", trySpeak);
+        const youthfulVoice = getYouthfulVoice();
+        if (youthfulVoice) utterance.voice = youthfulVoice;
+        window.speechSynthesis.speak(utterance);
+      };
+      window.speechSynthesis.addEventListener("voiceschanged", trySpeak);
+      // Safety net in case this browser never fires voiceschanged.
+      timers.current.push(setTimeout(trySpeak, 300));
+    }
   }
 
   function startListening() {
