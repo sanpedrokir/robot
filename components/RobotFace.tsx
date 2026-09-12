@@ -13,21 +13,26 @@ export default function RobotFace({ state }: { state: RobotState }) {
   return (
     <div className="flex flex-col items-center gap-3">
       <div
-        className={`relative h-56 w-56 overflow-hidden rounded-[3rem] shadow-xl shadow-sky-300/50 ${
+        className={`relative h-56 w-56 overflow-hidden rounded-[3rem] bg-slate-300 shadow-xl shadow-sky-300/50 ${
           state === "happy" ? "animate-happy-bounce" : "animate-float"
         }`}
       >
         <Image src="/neo-avatar.png" alt="Neo" fill sizes="224px" priority className="object-cover" />
 
-        {/* Mouth overlay: a rough crop over the lips that pulses open/closed
-            while speaking, giving the illusion of moving lips on top of an
-            otherwise static portrait. Position is an estimate based on the
-            source image's proportions — nudge the left/top percentages
-            below if it doesn't line up once you see it live. */}
-        <div
-          className={`absolute rounded-full bg-rose-950/70 ${state === "speaking" ? "animate-talk-mouth" : "scale-y-0"}`}
-          style={{ left: "44%", top: "57%", width: "13%", height: "5%" }}
-        />
+        {/* A second, mouth-open frame of the same portrait, layered exactly
+            on top and only rendered while speaking. Toggling its opacity
+            (mouth-flap) alternates it with the closed-mouth image beneath,
+            giving a real (if simple, 2-frame) talking animation instead of
+            a synthetic overlay shape. */}
+        {state === "speaking" && (
+          <Image
+            src="/neo-avatar-talk.png"
+            alt=""
+            fill
+            sizes="224px"
+            className="object-cover animate-mouth-flap"
+          />
+        )}
       </div>
 
       <p className="text-sm text-slate-500">{stateLabel[state]}</p>
