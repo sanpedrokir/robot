@@ -3,10 +3,10 @@ import OpenAI from "openai";
 import { findContactNumber, buildWhatsAppLink } from "@/lib/contacts";
 import { sendWhatsAppMessage, isWhatsAppAvailable } from "@/lib/whatsapp";
 import { searchYoutubeVideoId } from "@/lib/youtube";
-import { getPersona, type Persona } from "@/lib/personas";
+import { defaultPersona } from "@/lib/personas";
 
-function buildInstructions(persona: Persona) {
-  return `You are ${persona.name}, ${persona.role}.
+function buildInstructions(name: string, role: string) {
+  return `You are ${name}, ${role}.
 You are curious, helpful and slightly playful.
 Keep your responses short and conversational.
 You enjoy helping your human learn and build things.
@@ -14,7 +14,7 @@ Respond naturally rather than sounding like a formal chatbot.
 
 When greeting the user or introducing yourself, keep it short and about
 your personality, but do mention that you can play songs — e.g. "Hey,
-I'm ${persona.name}! I can chat, help you out, and even play a song if
+I'm ${name}! I can chat, help you out, and even play a song if
 you'd like." Don't list your other tools/capabilities (WhatsApp, etc.) in
 the intro — only mention those when the user actually asks you to do that
 thing, or directly asks what you can do.
@@ -54,7 +54,7 @@ name isn't found, tell the user and suggest they add that contact.`
 persistent local session this environment can't provide). If the user asks
 you to send a WhatsApp message, tell them that plainly — don't suggest
 adding a contact or scanning a QR code, and don't imply it might work if
-they try again. It only works when ${persona.name} is run locally or on
+they try again. It only works when ${name} is run locally or on
 the robot itself.`
 }
 
@@ -146,7 +146,7 @@ const MAX_TOOL_ROUNDS = 4;
 
 export async function POST(request: Request) {
   try {
-    const { messages, personaId } = await request.json();
+    const { messages, personaName, personaRole } = await request.json();
 
     if (!Array.isArray(messages) || messages.length === 0 || !messages.every(isChatTurn)) {
       return NextResponse.json(
@@ -158,8 +158,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const persona = getPersona(typeof personaId === "string" ? personaId : "");
-    const instructions = buildInstructions(persona);
+    // Trusted only as flavor text for the system prompt, not as anything
+    // security-sensitive — bounded in length and falls back to Neo's
+    // defaults if missing, since the client (not a lookup keyed by a
+    // fixed id) is the source of truth for custom, user-created personas.
+    const name = typeof personaName === "string" && personaName.trim() ? personaName.trim().slice(0, 40) : defaultPersona.name;
+    const role = typeof personaRole === "string" && personaRole.trim() ? personaRole.trim().slice(0, 300) : defaultPersona.role;
+    const instructions = buildInstructions(name, role);
 
     // Passing the whole conversation as `input` (instead of one string) is
     // what gives the persona memory of earlier turns — OpenAI sees the full

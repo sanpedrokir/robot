@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { RobotState } from "@/lib/types";
 import type { Persona } from "@/lib/personas";
 
@@ -22,13 +21,11 @@ export default function RobotFace({
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative h-56 w-56 animate-float overflow-hidden rounded-[3rem] bg-slate-300 shadow-xl shadow-sky-300/50">
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element -- avatar art is either a local file or a generated data: URL, neither of which benefits from Next's remote-image loader */}
+        <img
           src={state === "happy" ? persona.images.smile : persona.images.closed}
           alt={persona.name}
-          fill
-          sizes="224px"
-          priority
-          className="object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
         />
 
         {/* A second, mouth-open frame of the same portrait, layered exactly
@@ -38,12 +35,11 @@ export default function RobotFace({
             including pauses — instead of flapping non-stop the whole time
             the persona is speaking. */}
         {state === "speaking" && (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element -- same as above
+          <img
             src={persona.images.talk}
             alt=""
-            fill
-            sizes="224px"
-            className={`object-cover transition-opacity duration-100 ${mouthOpen ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-100 ${mouthOpen ? "opacity-100" : "opacity-0"}`}
           />
         )}
       </div>

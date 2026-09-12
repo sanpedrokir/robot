@@ -32,8 +32,8 @@ export const personas: Persona[] = [
   },
   {
     id: "diora",
-    name: "Noelle",
-    description: "Noelle, always up for a chat.",
+    name: "Elodie",
+    description: "Elodie, always up for a chat.",
     role: "a warm and chatty AI companion",
     images: {
       closed: "/personas/diora/closed.png",
@@ -142,3 +142,10 @@ export const defaultPersona = personas[0];
 export function getPersona(id: string): Persona {
   return personas.find((p) => p.id === id && p.available) ?? defaultPersona;
 }
+
+/** Sensible starting pitch/rate per voice gender, used for user-created custom personas. */
+export const defaultVoiceParams: Record<VoiceGender, { pitch: number; rate: number }> = {
+  male: { pitch: 1.15, rate: 1.05 },
+  female: { pitch: 1.15, rate: 1.0 },
+  child: { pitch: 1.85, rate: 1.25 },
+};

@@ -3,17 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import RobotFace from "@/components/RobotFace";
 import PersonaPicker from "@/components/PersonaPicker";
+import CreatePersonaModal from "@/components/CreatePersonaModal";
 import ChatBox from "@/components/ChatBox";
 import WhatsAppPanel from "@/components/WhatsAppPanel";
 import MusicPlayer from "@/components/MusicPlayer";
 import type { ChatMessage, RobotState } from "@/lib/types";
-import { personas, getPersona, defaultPersona, type VoiceGender } from "@/lib/personas";
+import { personas, defaultPersona, type Persona, type VoiceGender } from "@/lib/personas";
+import { getCustomPersonas, saveCustomPersona } from "@/lib/customPersonas";
 
 const PERSONA_STORAGE_KEY = "selectedPersonaId";
 
 export default function Home() {
   const [personaId, setPersonaId] = useState(defaultPersona.id);
-  const persona = getPersona(personaId);
+  const [customPersonas, setCustomPersonas] = useState<Persona[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const allPersonas = [...personas, ...customPersonas];
+  const persona = allPersonas.find((p) => p.id === personaId) ?? defaultPersona;
   const personaRef = useRef(persona);
   personaRef.current = persona;
 
@@ -23,11 +28,19 @@ export default function Home() {
     // during SSR, so reading it during render would mismatch hydration.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved) setPersonaId(saved);
+    getCustomPersonas().then(setCustomPersonas).catch(() => {});
   }, []);
 
   function selectPersona(id: string) {
     setPersonaId(id);
     window.localStorage.setItem(PERSONA_STORAGE_KEY, id);
+  }
+
+  function handlePersonaCreated(newPersona: Persona) {
+    setCustomPersonas((prev) => [...prev, newPersona]);
+    saveCustomPersona(newPersona).catch(() => {});
+    selectPersona(newPersona.id);
+    setShowCreateModal(false);
   }
 
   const [robotState, setRobotState] = useState<RobotState>("idle");
@@ -307,7 +320,8 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          personaId: personaRef.current.id,
+          personaName: personaRef.current.name,
+          personaRole: personaRef.current.role,
           // Send the whole conversation so far, not just the latest message,
           // so the persona can remember what was said earlier.
           messages: history.map((m) => ({
@@ -345,7 +359,16 @@ export default function Home() {
 
       <RobotFace persona={persona} state={robotState} mouthOpen={mouthOpen} />
 
-      <PersonaPicker personas={personas} selectedId={personaId} onSelect={selectPersona} />
+      <PersonaPicker
+        personas={allPersonas}
+        selectedId={personaId}
+        onSelect={selectPersona}
+        onRequestCreate={() => setShowCreateModal(true)}
+      />
+
+      {showCreateModal && (
+        <CreatePersonaModal onClose={() => setShowCreateModal(false)} onCreated={handlePersonaCreated} />
+      )}
 
       <WhatsAppPanel />
 
