@@ -14,8 +14,10 @@ export default function Home() {
   const [micOn, setMicOn] = useState(false);
   const [conversationMode, setConversationModeState] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<string | null>(null);
+  const [mouthOpen, setMouthOpen] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const mouthTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Recognition callbacks are created once per listening session and need
   // the up-to-date value, not the one closed over when they were set up —
   // a ref sidesteps that stale-closure problem.
@@ -36,10 +38,11 @@ export default function Home() {
     if (voices.length === 0) return null; // not loaded yet — caller falls back to pitch/rate only
 
     // Browsers don't expose an age on voices, so this is a best-effort
-    // preference list of common voice names (across Windows/Edge neural
-    // voices, Chrome's Google voices, and macOS) that tend to sound
-    // younger/lighter than the older default system voices.
-    const preferredNames = ["Aria", "Jenny", "Guy", "Samantha", "Zira", "Google US English"];
+    // preference list of common male voice names (across Windows/Edge
+    // neural voices, Chrome's Google voices, and macOS) — explicitly male
+    // only, since the default list previously picked a female-named voice
+    // (Aria/Jenny/Samantha/Zira) whenever one was available.
+    const preferredNames = ["Guy", "David", "Daniel", "Alex", "Google UK English Male"];
     for (const name of preferredNames) {
       const match = voices.find((v) => v.name.includes(name) && v.lang.startsWith("en"));
       if (match) return match;
@@ -70,12 +73,25 @@ export default function Home() {
     // any) named voice above was actually available on this system.
     utterance.pitch = 1.15;
     utterance.rate = 1.05;
+    // Flap the mouth open briefly on each word/sentence boundary the
+    // browser reports, instead of a fixed CSS animation running non-stop
+    // for the whole speaking duration — this tracks actual speech rhythm
+    // (including natural pauses) rather than a constant mechanical flap.
+    utterance.onboundary = () => {
+      setMouthOpen(true);
+      if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
+      mouthTimerRef.current = setTimeout(() => setMouthOpen(false), 150);
+    };
     utterance.onend = () => {
       setRobotState("idle");
+      setMouthOpen(false);
+      if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       if (conversationModeRef.current) startListening();
     };
     utterance.onerror = () => {
       setRobotState("idle");
+      setMouthOpen(false);
+      if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       if (conversationModeRef.current) startListening();
     };
     window.speechSynthesis.speak(utterance);
@@ -212,7 +228,7 @@ export default function Home() {
   return (
     <div className="flex flex-col flex-1 items-center gap-6 bg-zinc-50 py-10 px-4">
 
-      <RobotFace state={robotState} />
+      <RobotFace state={robotState} mouthOpen={mouthOpen} />
 
       <WhatsAppPanel />
 

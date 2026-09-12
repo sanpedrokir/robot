@@ -9,7 +9,7 @@ const stateLabel: Record<RobotState, string> = {
   happy: "Neo is happy!",
 };
 
-export default function RobotFace({ state }: { state: RobotState }) {
+export default function RobotFace({ state, mouthOpen }: { state: RobotState; mouthOpen: boolean }) {
   return (
     <div className="flex flex-col items-center gap-3">
       <div
@@ -20,17 +20,18 @@ export default function RobotFace({ state }: { state: RobotState }) {
         <Image src="/neo-avatar.png" alt="Neo" fill sizes="224px" priority className="object-cover" />
 
         {/* A second, mouth-open frame of the same portrait, layered exactly
-            on top and only rendered while speaking. Toggling its opacity
-            (mouth-flap) alternates it with the closed-mouth image beneath,
-            giving a real (if simple, 2-frame) talking animation instead of
-            a synthetic overlay shape. */}
+            on top. Its visibility is driven by mouthOpen (toggled per
+            speech word/sentence boundary in app/page.tsx) rather than a
+            fixed CSS animation, so it tracks actual speech rhythm —
+            including pauses — instead of flapping non-stop the whole time
+            Neo is speaking. */}
         {state === "speaking" && (
           <Image
             src="/neo-avatar-talk.png"
             alt=""
             fill
             sizes="224px"
-            className="object-cover animate-mouth-flap"
+            className={`object-cover transition-opacity duration-100 ${mouthOpen ? "opacity-100" : "opacity-0"}`}
           />
         )}
       </div>
