@@ -9,7 +9,7 @@ import WhatsAppPanel from "@/components/WhatsAppPanel";
 import MusicPlayer from "@/components/MusicPlayer";
 import type { ChatMessage, RobotState } from "@/lib/types";
 import { personas, defaultPersona, type Persona, type VoiceGender } from "@/lib/personas";
-import { getCustomPersonas, saveCustomPersona } from "@/lib/customPersonas";
+import { getCustomPersonas, saveCustomPersona, deleteCustomPersona } from "@/lib/customPersonas";
 
 const PERSONA_STORAGE_KEY = "selectedPersonaId";
 
@@ -41,6 +41,14 @@ export default function Home() {
     saveCustomPersona(newPersona).catch(() => {});
     selectPersona(newPersona.id);
     setShowCreateModal(false);
+  }
+
+  function handlePersonaDeleted(id: string) {
+    setCustomPersonas((prev) => prev.filter((p) => p.id !== id));
+    deleteCustomPersona(id).catch(() => {});
+    // Deleting the persona you're currently talking to falls back to Neo
+    // rather than leaving the app pointed at an id that no longer exists.
+    if (personaId === id) selectPersona(defaultPersona.id);
   }
 
   const [robotState, setRobotState] = useState<RobotState>("idle");
@@ -364,6 +372,7 @@ export default function Home() {
         selectedId={personaId}
         onSelect={selectPersona}
         onRequestCreate={() => setShowCreateModal(true)}
+        onDelete={handlePersonaDeleted}
       />
 
       {showCreateModal && (

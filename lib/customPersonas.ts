@@ -34,6 +34,16 @@ export async function saveCustomPersona(persona: Persona): Promise<void> {
   });
 }
 
+export async function deleteCustomPersona(id: string): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 /**
  * The generation API returns full-size (1024x1024) PNGs, far bigger than
  * needed for a face shown at up to 224px — downscale before storing so

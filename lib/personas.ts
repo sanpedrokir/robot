@@ -143,6 +143,11 @@ export function getPersona(id: string): Persona {
   return personas.find((p) => p.id === id && p.available) ?? defaultPersona;
 }
 
+/** User-created personas are id-prefixed this way (see CreatePersonaModal) — only these are deletable. */
+export function isCustomPersonaId(id: string): boolean {
+  return id.startsWith("custom-");
+}
+
 /** Sensible starting pitch/rate per voice gender, used for user-created custom personas. */
 export const defaultVoiceParams: Record<VoiceGender, { pitch: number; rate: number }> = {
   male: { pitch: 1.15, rate: 1.05 },
