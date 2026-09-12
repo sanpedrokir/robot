@@ -12,11 +12,7 @@ const stateLabel: Record<RobotState, string> = {
 export default function RobotFace({ state, mouthOpen }: { state: RobotState; mouthOpen: boolean }) {
   return (
     <div className="flex flex-col items-center gap-3">
-      <div
-        className={`relative h-56 w-56 overflow-hidden rounded-[3rem] bg-slate-300 shadow-xl shadow-sky-300/50 ${
-          state === "happy" ? "animate-happy-bounce" : "animate-float"
-        }`}
-      >
+      <div className="relative h-56 w-56 animate-float overflow-hidden rounded-[3rem] bg-slate-300 shadow-xl shadow-sky-300/50">
         <Image
           src={state === "happy" ? "/neo-avatar-smile.png" : "/neo-avatar.png"}
           alt="Neo"
