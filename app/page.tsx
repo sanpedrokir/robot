@@ -31,6 +31,22 @@ export default function Home() {
     setConversationModeState(value);
   }
 
+  function getYouthfulVoice(): SpeechSynthesisVoice | null {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) return null; // not loaded yet — caller falls back to pitch/rate only
+
+    // Browsers don't expose an age on voices, so this is a best-effort
+    // preference list of common voice names (across Windows/Edge neural
+    // voices, Chrome's Google voices, and macOS) that tend to sound
+    // younger/lighter than the older default system voices.
+    const preferredNames = ["Aria", "Jenny", "Guy", "Samantha", "Zira", "Google US English"];
+    for (const name of preferredNames) {
+      const match = voices.find((v) => v.name.includes(name) && v.lang.startsWith("en"));
+      if (match) return match;
+    }
+    return voices.find((v) => v.lang.startsWith("en")) ?? null;
+  }
+
   function speak(text: string) {
     if (!("speechSynthesis" in window)) {
       if (conversationModeRef.current) startListening();
@@ -47,6 +63,13 @@ export default function Home() {
       .replace(/\s{2,}/g, " ")
       .trim();
     const utterance = new SpeechSynthesisUtterance(spokenText);
+    const youthfulVoice = getYouthfulVoice();
+    if (youthfulVoice) utterance.voice = youthfulVoice;
+    // A touch higher pitch and slightly quicker pace reads as younger and
+    // more energetic on essentially any voice, regardless of which (if
+    // any) named voice above was actually available on this system.
+    utterance.pitch = 1.15;
+    utterance.rate = 1.05;
     utterance.onend = () => {
       setRobotState("idle");
       if (conversationModeRef.current) startListening();
