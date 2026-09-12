@@ -13,21 +13,11 @@ export default function RobotFace({ state, mouthOpen }: { state: RobotState; mou
   return (
     <div className="flex flex-col items-center gap-3">
       <div
-        className={`relative h-56 w-56 overflow-hidden rounded-full bg-slate-300 shadow-xl shadow-sky-300/50 ${
+        className={`relative h-56 w-56 overflow-hidden rounded-[3rem] bg-slate-300 shadow-xl shadow-sky-300/50 ${
           state === "happy" ? "animate-happy-bounce" : "animate-float"
         }`}
       >
-        {/* Zoomed in a bit (scale-125) and circle-cropped by the rounded-full
-            parent above — crops out the flat gray backdrop from the source
-            photos, which otherwise reads as a big square block behind Neo. */}
-        <Image
-          src="/neo-avatar.png"
-          alt="Neo"
-          fill
-          sizes="224px"
-          priority
-          className="scale-125 object-cover"
-        />
+        <Image src="/neo-avatar.png" alt="Neo" fill sizes="224px" priority className="object-cover" />
 
         {/* A second, mouth-open frame of the same portrait, layered exactly
             on top. Its visibility is driven by mouthOpen (toggled per
@@ -41,9 +31,7 @@ export default function RobotFace({ state, mouthOpen }: { state: RobotState; mou
             alt=""
             fill
             sizes="224px"
-            className={`scale-125 object-cover transition-opacity duration-100 ${
-              mouthOpen ? "opacity-100" : "opacity-0"
-            }`}
+            className={`object-cover transition-opacity duration-100 ${mouthOpen ? "opacity-100" : "opacity-0"}`}
           />
         )}
       </div>
