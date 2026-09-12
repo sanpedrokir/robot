@@ -43,7 +43,7 @@ export default function WhatsAppPanel() {
 
   if (status === "ready") {
     return (
-      <p className="text-xs font-medium text-emerald-700">✅ WhatsApp connected — Bobby can send messages</p>
+      <p className="text-xs font-medium text-emerald-700">✅ WhatsApp connected — Neo can send messages</p>
     );
   }
 

@@ -33,11 +33,11 @@ function Mouth({ state }: { state: RobotState }) {
 }
 
 const stateLabel: Record<RobotState, string> = {
-  idle: "Bobby is waiting",
-  listening: "Bobby is listening...",
-  thinking: "Bobby is thinking...",
-  speaking: "Bobby is speaking...",
-  happy: "Bobby is happy!",
+  idle: "Neo is waiting",
+  listening: "Neo is listening...",
+  thinking: "Neo is thinking...",
+  speaking: "Neo is speaking...",
+  happy: "Neo is happy!",
 };
 
 export default function RobotFace({ state }: { state: RobotState }) {

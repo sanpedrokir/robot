@@ -173,7 +173,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           // Send the whole conversation so far, not just the latest message,
-          // so Bobby can remember what was said earlier.
+          // so Neo can remember what was said earlier.
           messages: history.map((m) => ({
             role: m.sender === "user" ? "user" : "assistant",
             content: m.text,
@@ -236,7 +236,7 @@ export default function Home() {
               ? micOn
                 ? "Listening… click to end hands-free chat"
                 : "Hands-free chat is on — click to end"
-              : "Start hands-free voice chat with Bobby"
+              : "Start hands-free voice chat with Neo"
           }
           className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
             conversationMode ? "bg-red-500 text-white animate-pulse" : "bg-slate-200 text-slate-700 hover:bg-slate-300"

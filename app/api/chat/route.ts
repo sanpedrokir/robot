@@ -5,7 +5,7 @@ import { findContactNumber, buildWhatsAppLink } from "@/lib/contacts";
 import { sendWhatsAppMessage, isWhatsAppAvailable } from "@/lib/whatsapp";
 import { searchYoutubeVideoId } from "@/lib/youtube";
 
-const BOBBY_INSTRUCTIONS = `You are Bobby, a small friendly desktop AI robot.
+const NEO_INSTRUCTIONS = `You are Neo, a small friendly desktop AI robot.
 You are curious, helpful and slightly playful.
 Keep your responses short and conversational.
 You enjoy helping your human learn and build things.
@@ -13,7 +13,7 @@ Respond naturally rather than sounding like a formal chatbot.
 
 When greeting the user or introducing yourself, keep it short and about
 your personality, but do mention that you can play songs — e.g. "Hey,
-I'm Bobby! I can chat, help you out, and even play a song if you'd
+I'm Neo! I can chat, help you out, and even play a song if you'd
 like." Don't list your other tools/capabilities (file search, WhatsApp,
 etc.) in the intro — only mention those when the user actually asks you
 to do that thing, or directly asks what you can do.
@@ -58,7 +58,7 @@ name isn't found, tell the user and suggest they add that contact.`
 persistent local session this environment can't provide). If the user asks
 you to send a WhatsApp message, tell them that plainly — don't suggest
 adding a contact or scanning a QR code, and don't imply it might work if
-they try again. It only works when Bobby is run locally or on the robot
+they try again. It only works when Neo is run locally or on the robot
 itself.`
 }
 
@@ -112,7 +112,7 @@ const tools = [
     strict: false,
   },
   // Only offered to the model when this deployment can actually act on it
-  // (see lib/whatsapp.ts) — otherwise Bobby could "call" it and get a
+  // (see lib/whatsapp.ts) — otherwise Neo could "call" it and get a
   // confusing tool-level failure instead of just explaining upfront that
   // WhatsApp isn't available here.
   ...(isWhatsAppAvailable
@@ -184,16 +184,16 @@ export async function POST(request: Request) {
     }
 
     // Passing the whole conversation as `input` (instead of one string) is
-    // what gives Bobby memory of earlier turns — OpenAI sees the full
+    // what gives Neo memory of earlier turns — OpenAI sees the full
     // back-and-forth on every call, not just the latest message.
     let response = await client.responses.create({
       model: "gpt-5.6-luna",
-      instructions: BOBBY_INSTRUCTIONS,
+      instructions: NEO_INSTRUCTIONS,
       input: messages,
       tools,
     });
 
-    // If Bobby called a tool, run the real action on our server and hand
+    // If Neo called a tool, run the real action on our server and hand
     // the actual result back so it can answer with real data instead of
     // just telling the user how to do it themselves. We also keep the
     // last search/link results to send to the client as clickable links.
@@ -278,7 +278,7 @@ export async function POST(request: Request) {
 
       response = await client.responses.create({
         model: "gpt-5.6-luna",
-        instructions: BOBBY_INSTRUCTIONS,
+        instructions: NEO_INSTRUCTIONS,
         previous_response_id: response.id,
         input: toolOutputs,
         tools,
@@ -292,9 +292,9 @@ export async function POST(request: Request) {
       song: lastSong ?? undefined,
     });
   } catch (error) {
-    console.error("Bobby chat error:", error);
+    console.error("Neo chat error:", error);
     return NextResponse.json(
-      { error: "Bobby couldn't think of a reply. Please try again." },
+      { error: "Neo couldn't think of a reply. Please try again." },
       { status: 500 }
     );
   }

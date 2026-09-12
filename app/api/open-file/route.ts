@@ -3,7 +3,7 @@ import { execFile } from "child_process";
 import { resolveWithinHome } from "@/lib/fileSearch";
 
 // This route only opens a file after a human clicks a link in the UI — it
-// is never called by Bobby/the model itself. resolveWithinHome() also
+// is never called by Neo/the model itself. resolveWithinHome() also
 // re-checks the path is a real file inside the user's home folder, so a
 // crafted path can't escape to system files even if something tampered
 // with the request.
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ opened: true });
   } catch (error) {
-    console.error("Bobby open-file error:", error);
+    console.error("Neo open-file error:", error);
     return NextResponse.json({ error: "Couldn't open that file." }, { status: 500 });
   }
 }
