@@ -1,21 +1,30 @@
 import Image from "next/image";
 import type { RobotState } from "@/lib/types";
+import type { Persona } from "@/lib/personas";
 
-const stateLabel: Record<RobotState, string> = {
-  idle: "Neo is waiting",
-  listening: "Neo is listening...",
-  thinking: "Neo is thinking...",
-  speaking: "Neo is speaking...",
-  happy: "Neo is happy!",
+const stateVerb: Record<RobotState, string> = {
+  idle: "is waiting",
+  listening: "is listening...",
+  thinking: "is thinking...",
+  speaking: "is speaking...",
+  happy: "is happy!",
 };
 
-export default function RobotFace({ state, mouthOpen }: { state: RobotState; mouthOpen: boolean }) {
+export default function RobotFace({
+  persona,
+  state,
+  mouthOpen,
+}: {
+  persona: Persona;
+  state: RobotState;
+  mouthOpen: boolean;
+}) {
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative h-56 w-56 animate-float overflow-hidden rounded-[3rem] bg-slate-300 shadow-xl shadow-sky-300/50">
         <Image
-          src={state === "happy" ? "/neo-avatar-smile.png" : "/neo-avatar.png"}
-          alt="Neo"
+          src={state === "happy" ? persona.images.smile : persona.images.closed}
+          alt={persona.name}
           fill
           sizes="224px"
           priority
@@ -27,10 +36,10 @@ export default function RobotFace({ state, mouthOpen }: { state: RobotState; mou
             speech word/sentence boundary in app/page.tsx) rather than a
             fixed CSS animation, so it tracks actual speech rhythm —
             including pauses — instead of flapping non-stop the whole time
-            Neo is speaking. */}
+            the persona is speaking. */}
         {state === "speaking" && (
           <Image
-            src="/neo-avatar-talk.png"
+            src={persona.images.talk}
             alt=""
             fill
             sizes="224px"
@@ -39,7 +48,9 @@ export default function RobotFace({ state, mouthOpen }: { state: RobotState; mou
         )}
       </div>
 
-      <p className="text-sm text-slate-500">{stateLabel[state]}</p>
+      <p className="text-sm text-slate-500">
+        {persona.name} {stateVerb[state]}
+      </p>
     </div>
   );
 }

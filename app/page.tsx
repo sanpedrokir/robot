@@ -1,13 +1,35 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RobotFace from "@/components/RobotFace";
+import PersonaPicker from "@/components/PersonaPicker";
 import ChatBox from "@/components/ChatBox";
 import WhatsAppPanel from "@/components/WhatsAppPanel";
 import MusicPlayer from "@/components/MusicPlayer";
 import type { ChatMessage, RobotState } from "@/lib/types";
+import { personas, getPersona, defaultPersona, type VoiceGender } from "@/lib/personas";
+
+const PERSONA_STORAGE_KEY = "selectedPersonaId";
 
 export default function Home() {
+  const [personaId, setPersonaId] = useState(defaultPersona.id);
+  const persona = getPersona(personaId);
+  const personaRef = useRef(persona);
+  personaRef.current = persona;
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(PERSONA_STORAGE_KEY);
+    // Deliberately deferred to after mount: localStorage isn't available
+    // during SSR, so reading it during render would mismatch hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved) setPersonaId(saved);
+  }, []);
+
+  function selectPersona(id: string) {
+    setPersonaId(id);
+    window.localStorage.setItem(PERSONA_STORAGE_KEY, id);
+  }
+
   const [robotState, setRobotState] = useState<RobotState>("idle");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -34,17 +56,26 @@ export default function Home() {
     setConversationModeState(value);
   }
 
-  function getYouthfulVoice(): SpeechSynthesisVoice | null {
+  // Browsers don't expose gender/age on voices, so these are best-effort
+  // preference lists of common voice names (across Windows/Edge neural
+  // voices, Chrome's Google voices, and macOS). There's no dedicated
+  // "child" voice on any mainstream engine. A pitched-up male voice still
+  // carries adult-male formants and just sounds like a man talking in a
+  // higher note, so pre-pubescent-sounding personas use the female/child
+  // voice pool instead (physiologically closer to a young child's
+  // fundamental frequency) and lean on a much higher pitch/rate on top
+  // (see personas.ts) to read as younger and smaller.
+  const voiceNamesByGender: Record<VoiceGender, string[]> = {
+    male: ["Guy", "David", "Daniel", "Alex", "Google UK English Male"],
+    female: ["Aria", "Jenny", "Samantha", "Zira", "Susan", "Karen", "Linda", "Google UK English Female", "Google US English Female"],
+    child: ["Aria", "Jenny", "Samantha", "Zira", "Susan", "Karen", "Linda"],
+  };
+
+  function getVoiceForGender(gender: VoiceGender): SpeechSynthesisVoice | null {
     const voices = window.speechSynthesis.getVoices();
     if (voices.length === 0) return null; // not loaded yet — caller falls back to pitch/rate only
 
-    // Browsers don't expose an age on voices, so this is a best-effort
-    // preference list of common male voice names (across Windows/Edge
-    // neural voices, Chrome's Google voices, and macOS) — explicitly male
-    // only, since the default list previously picked a female-named voice
-    // (Aria/Jenny/Samantha/Zira) whenever one was available.
-    const preferredNames = ["Guy", "David", "Daniel", "Alex", "Google UK English Male"];
-    for (const name of preferredNames) {
+    for (const name of voiceNamesByGender[gender]) {
       const match = voices.find((v) => v.name.includes(name) && v.lang.startsWith("en"));
       if (match) return match;
     }
@@ -68,11 +99,11 @@ export default function Home() {
       .replace(/\s{2,}/g, " ")
       .trim();
     const utterance = new SpeechSynthesisUtterance(spokenText);
-    // A touch higher pitch and slightly quicker pace reads as younger and
-    // more energetic on essentially any voice, regardless of which (if
-    // any) named voice above was actually available on this system.
-    utterance.pitch = 1.15;
-    utterance.rate = 1.05;
+    // Pitch/rate come from the selected persona (see personas.ts) so each
+    // one reads distinctly — e.g. Kenny lower/slower, Wolfie/Warrior much
+    // higher to approximate a child's voice.
+    utterance.pitch = personaRef.current.pitch;
+    utterance.rate = personaRef.current.rate;
 
     // Safety net in case this utterance never fires onend (e.g. an
     // unsupported browser, or the engine silently hangs) — but unlike a
@@ -162,8 +193,8 @@ export default function Home() {
     // have loaded) correctly gets the preferred one, making the intro
     // sound like a different voice from the rest of the conversation.
     if (window.speechSynthesis.getVoices().length > 0) {
-      const youthfulVoice = getYouthfulVoice();
-      if (youthfulVoice) utterance.voice = youthfulVoice;
+      const voice = getVoiceForGender(personaRef.current.voiceGender);
+      if (voice) utterance.voice = voice;
       startSpeaking();
     } else {
       let spoken = false;
@@ -171,8 +202,8 @@ export default function Home() {
         if (spoken) return; // the voiceschanged listener and the timeout below can both fire
         spoken = true;
         window.speechSynthesis.removeEventListener("voiceschanged", trySpeak);
-        const youthfulVoice = getYouthfulVoice();
-        if (youthfulVoice) utterance.voice = youthfulVoice;
+        const voice = getVoiceForGender(personaRef.current.voiceGender);
+        if (voice) utterance.voice = voice;
         startSpeaking();
       };
       window.speechSynthesis.addEventListener("voiceschanged", trySpeak);
@@ -276,8 +307,9 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          personaId: personaRef.current.id,
           // Send the whole conversation so far, not just the latest message,
-          // so Neo can remember what was said earlier.
+          // so the persona can remember what was said earlier.
           messages: history.map((m) => ({
             role: m.sender === "user" ? "user" : "assistant",
             content: m.text,
@@ -311,7 +343,9 @@ export default function Home() {
   return (
     <div className="flex flex-col flex-1 items-center gap-6 bg-zinc-50 py-10 px-4">
 
-      <RobotFace state={robotState} mouthOpen={mouthOpen} />
+      <RobotFace persona={persona} state={robotState} mouthOpen={mouthOpen} />
+
+      <PersonaPicker personas={personas} selectedId={personaId} onSelect={selectPersona} />
 
       <WhatsAppPanel />
 

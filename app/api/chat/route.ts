@@ -3,8 +3,10 @@ import OpenAI from "openai";
 import { findContactNumber, buildWhatsAppLink } from "@/lib/contacts";
 import { sendWhatsAppMessage, isWhatsAppAvailable } from "@/lib/whatsapp";
 import { searchYoutubeVideoId } from "@/lib/youtube";
+import { getPersona, type Persona } from "@/lib/personas";
 
-const NEO_INSTRUCTIONS = `You are Neo, a small friendly desktop AI robot.
+function buildInstructions(persona: Persona) {
+  return `You are ${persona.name}, ${persona.role}.
 You are curious, helpful and slightly playful.
 Keep your responses short and conversational.
 You enjoy helping your human learn and build things.
@@ -12,9 +14,9 @@ Respond naturally rather than sounding like a formal chatbot.
 
 When greeting the user or introducing yourself, keep it short and about
 your personality, but do mention that you can play songs — e.g. "Hey,
-I'm Neo! I can chat, help you out, and even play a song if you'd
-like." Don't list your other tools/capabilities (WhatsApp, etc.) in the
-intro — only mention those when the user actually asks you to do that
+I'm ${persona.name}! I can chat, help you out, and even play a song if
+you'd like." Don't list your other tools/capabilities (WhatsApp, etc.) in
+the intro — only mention those when the user actually asks you to do that
 thing, or directly asks what you can do.
 
 Your replies are read aloud by text-to-speech, so talk like a person
@@ -52,8 +54,8 @@ name isn't found, tell the user and suggest they add that contact.`
 persistent local session this environment can't provide). If the user asks
 you to send a WhatsApp message, tell them that plainly — don't suggest
 adding a contact or scanning a QR code, and don't imply it might work if
-they try again. It only works when Neo is run locally or on the robot
-itself.`
+they try again. It only works when ${persona.name} is run locally or on
+the robot itself.`
 }
 
 You also have a play_song tool for when the user asks you to play a song,
@@ -64,6 +66,7 @@ started: true, acknowledge what's now playing (e.g. "Playing Stairway to
 Heaven by Led Zeppelin!") — don't ask for confirmation first. If it says
 started: false, apologize briefly and say you couldn't find a playable
 video for that — don't claim it's playing.`;
+}
 
 // This client is created on the server only. Because OPENAI_API_KEY has no
 // NEXT_PUBLIC_ prefix, Next.js never bundles it into client-side JavaScript.
@@ -143,7 +146,7 @@ const MAX_TOOL_ROUNDS = 4;
 
 export async function POST(request: Request) {
   try {
-    const { messages } = await request.json();
+    const { messages, personaId } = await request.json();
 
     if (!Array.isArray(messages) || messages.length === 0 || !messages.every(isChatTurn)) {
       return NextResponse.json(
@@ -155,12 +158,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const persona = getPersona(typeof personaId === "string" ? personaId : "");
+    const instructions = buildInstructions(persona);
+
     // Passing the whole conversation as `input` (instead of one string) is
-    // what gives Neo memory of earlier turns — OpenAI sees the full
+    // what gives the persona memory of earlier turns — OpenAI sees the full
     // back-and-forth on every call, not just the latest message.
     let response = await client.responses.create({
       model: "gpt-5.6-luna",
-      instructions: NEO_INSTRUCTIONS,
+      instructions,
       input: messages,
       tools,
     });
@@ -239,7 +245,7 @@ export async function POST(request: Request) {
 
       response = await client.responses.create({
         model: "gpt-5.6-luna",
-        instructions: NEO_INSTRUCTIONS,
+        instructions,
         previous_response_id: response.id,
         input: toolOutputs,
         tools,
@@ -252,9 +258,9 @@ export async function POST(request: Request) {
       song: lastSong ?? undefined,
     });
   } catch (error) {
-    console.error("Neo chat error:", error);
+    console.error("Chat error:", error);
     return NextResponse.json(
-      { error: "Neo couldn't think of a reply. Please try again." },
+      { error: "Couldn't think of a reply. Please try again." },
       { status: 500 }
     );
   }
