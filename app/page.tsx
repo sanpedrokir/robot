@@ -95,12 +95,33 @@ export default function Home() {
   function getVoiceForGender(gender: VoiceGender): SpeechSynthesisVoice | null {
     const voices = window.speechSynthesis.getVoices();
     if (voices.length === 0) return null; // not loaded yet — caller falls back to pitch/rate only
+    const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
 
     for (const name of voiceNamesByGender[gender]) {
-      const match = voices.find((v) => v.name.includes(name) && v.lang.startsWith("en"));
+      const match = englishVoices.find((v) => v.name.includes(name));
       if (match) return match;
     }
-    return voices.find((v) => v.lang.startsWith("en")) ?? null;
+
+    // None of the known desktop voice names matched — likely mobile/Android
+    // Chrome, whose local TTS voices use internal names like
+    // "en-us-x-sfg#female_1-local" instead of a human-readable one. Those
+    // still embed the gender as a literal substring, just not one of the
+    // proper names above, so check for that before giving up and grabbing
+    // whatever the first English voice happens to be (which was silently
+    // making every non-male persona sound identical to whichever voice
+    // came first on these devices).
+    const wantsFemale = gender !== "male"; // "child" also prefers a female-leaning voice, see comment above
+    const byGenderWord = englishVoices.find((v) => {
+      const n = v.name.toLowerCase();
+      // Check "female" first: it's a substring of "male", so a naive
+      // male-only check would misclassify a female-labeled voice.
+      if (n.includes("female")) return wantsFemale;
+      if (n.includes("male")) return !wantsFemale;
+      return false;
+    });
+    if (byGenderWord) return byGenderWord;
+
+    return englishVoices[0] ?? null;
   }
 
   function speak(text: string) {
