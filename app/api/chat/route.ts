@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { searchFiles, type FileSearchArgs } from "@/lib/fileSearch";
 import { findContactNumber, buildWhatsAppLink } from "@/lib/contacts";
 import { sendWhatsAppMessage, isWhatsAppAvailable } from "@/lib/whatsapp";
 import { searchYoutubeVideoId } from "@/lib/youtube";
@@ -14,9 +13,9 @@ Respond naturally rather than sounding like a formal chatbot.
 When greeting the user or introducing yourself, keep it short and about
 your personality, but do mention that you can play songs — e.g. "Hey,
 I'm Neo! I can chat, help you out, and even play a song if you'd
-like." Don't list your other tools/capabilities (file search, WhatsApp,
-etc.) in the intro — only mention those when the user actually asks you
-to do that thing, or directly asks what you can do.
+like." Don't list your other tools/capabilities (WhatsApp, etc.) in the
+intro — only mention those when the user actually asks you to do that
+thing, or directly asks what you can do.
 
 Your replies are read aloud by text-to-speech, so talk like a person
 answering a friend out loud, not like written chat text. Never include
@@ -28,21 +27,16 @@ describe an expression or icon in words either — e.g. don't write
 things like "smiley face icon" or "robot face" as part of your reply.
 If you want to convey emotion, do it through your actual word choice
 and tone, not by naming an icon or expression. Plain sentences only,
-nothing that isn't meant to be spoken aloud. When the user
-asks you to do something (find files, send a message, etc.), open with a
+nothing that isn't meant to be spoken aloud. You have no access to the
+user's files, photos, or device storage of any kind — if asked to find,
+open, or check for a file, say plainly that you can't access files,
+rather than asking which folder to search. When the user asks you to do
+something (send a message, play a song, etc.), open with a
 short, natural acknowledgment in your own voice — vary it, e.g. "Sure
 thing!", "On it.", "Okay!", "Your wish is my command.", "Got it, one
 sec." — then follow up with the real result once you have it. For plain
 questions or chit-chat, just answer directly and warmly, the way a
 person would, without needing an acknowledgment first.
-
-You have a search_files tool that can look for real files on the user's
-computer. Use it whenever the user asks you to find, list, or count files
-(e.g. "find my PDFs", "do I have any spreadsheets"). It only searches the
-user's home folder (Desktop, Documents, Downloads, Pictures, etc.), not the
-whole drive, and it cannot open, move, or delete anything — tell the user
-that if a search comes back empty or they ask for something outside that
-folder.
 
 ${
   isWhatsAppAvailable
@@ -89,28 +83,6 @@ function isChatTurn(value: unknown): value is ChatTurn {
 }
 
 const tools = [
-  {
-    type: "function" as const,
-    name: "search_files",
-    description:
-      "Search for files by extension and/or name within the user's home folder on this computer (Desktop, Documents, Downloads, Pictures, etc). Read-only — cannot open, move, or delete files. Does not search the whole drive.",
-    parameters: {
-      type: "object",
-      properties: {
-        extension: {
-          type: "string",
-          description: "File extension to filter by, without the dot, e.g. 'pdf'.",
-        },
-        query: {
-          type: "string",
-          description: "Case-insensitive substring to match against the file name.",
-        },
-      },
-      required: [],
-      additionalProperties: false,
-    },
-    strict: false,
-  },
   // Only offered to the model when this deployment can actually act on it
   // (see lib/whatsapp.ts) — otherwise Neo could "call" it and get a
   // confusing tool-level failure instead of just explaining upfront that
@@ -197,7 +169,6 @@ export async function POST(request: Request) {
     // the actual result back so it can answer with real data instead of
     // just telling the user how to do it themselves. We also keep the
     // last search/link results to send to the client as clickable links.
-    let lastFiles: string[] | null = null;
     let lastWhatsapp: WhatsAppOutcome | null = null;
     let lastSong: { query: string; videoId: string } | null = null;
 
@@ -212,16 +183,6 @@ export async function POST(request: Request) {
             args = JSON.parse(call.arguments);
           } catch {
             // malformed args from the model — fall back to empty args
-          }
-
-          if (call.name === "search_files") {
-            const result = await searchFiles(args as FileSearchArgs);
-            lastFiles = result.files;
-            return {
-              type: "function_call_output" as const,
-              call_id: call.call_id,
-              output: JSON.stringify(result),
-            };
           }
 
           if (call.name === "send_whatsapp_message") {
@@ -287,7 +248,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       reply: response.output_text,
-      files: lastFiles ?? undefined,
       whatsapp: lastWhatsapp ?? undefined,
       song: lastSong ?? undefined,
     });

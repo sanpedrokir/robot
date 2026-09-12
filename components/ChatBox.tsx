@@ -1,36 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { ChatMessage } from "@/lib/types";
-
-function FileLink({ path }: { path: string }) {
-  const [status, setStatus] = useState<"idle" | "opening" | "error">("idle");
-  const name = path.split(/[/\\]/).pop() ?? path;
-
-  async function open() {
-    setStatus("opening");
-    try {
-      const res = await fetch("/api/open-file", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path }),
-      });
-      if (!res.ok) throw new Error();
-      setStatus("idle");
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  return (
-    <button
-      onClick={open}
-      title={path}
-      className="block w-full truncate text-left text-xs underline decoration-dotted text-sky-700 hover:text-sky-900"
-    >
-      {status === "opening" ? "Opening…" : name}
-      {status === "error" && <span className="text-red-500 no-underline"> (couldn&apos;t open)</span>}
-    </button>
-  );
-}
 
 export default function ChatBox({ messages }: { messages: ChatMessage[] }) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -57,14 +26,6 @@ export default function ChatBox({ messages }: { messages: ChatMessage[] }) {
           }`}
         >
           {message.text}
-
-          {message.files && message.files.length > 0 && (
-            <div className="mt-2 flex flex-col gap-1 border-t border-slate-200 pt-2">
-              {message.files.map((path) => (
-                <FileLink key={path} path={path} />
-              ))}
-            </div>
-          )}
 
           {message.whatsapp && (
             <div className="mt-2 border-t border-slate-200 pt-2">

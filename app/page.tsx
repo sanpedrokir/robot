@@ -269,7 +269,6 @@ export default function Home() {
     timers.current.push(setTimeout(() => setRobotState("thinking"), 600));
 
     let replyText: string;
-    let replyFiles: string[] | undefined;
     let replyWhatsapp: ChatMessage["whatsapp"];
     let replySongVideoId: string | undefined;
     try {
@@ -288,7 +287,6 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Request failed");
       replyText = data.reply;
-      replyFiles = data.files;
       replyWhatsapp = data.whatsapp;
       replySongVideoId = data.song?.videoId;
     } catch {
@@ -300,7 +298,7 @@ export default function Home() {
     clearTimers();
     setMessages((prev) => [
       ...prev,
-      { id: Date.now() + 1, sender: "milo", text: replyText, files: replyFiles, whatsapp: replyWhatsapp },
+      { id: Date.now() + 1, sender: "milo", text: replyText, whatsapp: replyWhatsapp },
     ]);
     // Speak the reply either way (including the glitch message) so a
     // hands-free conversation doesn't just stall silently on a failure —

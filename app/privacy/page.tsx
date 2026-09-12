@@ -43,12 +43,11 @@ export default function PrivacyPolicy() {
         .
       </p>
 
-      <h2 className="text-lg font-semibold text-slate-900">File search &amp; WhatsApp</h2>
+      <h2 className="text-lg font-semibold text-slate-900">WhatsApp</h2>
       <p>
-        Neo can optionally search local files or send WhatsApp messages when run on a personal
-        computer with those features enabled. These act only on the local machine and WhatsApp
-        account they are configured with, and are not available on the public hosted version of
-        the app.
+        Neo does not send WhatsApp messages or access your WhatsApp account. A message-sending
+        feature exists in Neo&apos;s source code for a separate, self-hosted developer mode, but
+        it is disabled in this published app and cannot be enabled by end users.
       </p>
 
       <h2 className="text-lg font-semibold text-slate-900">No accounts, no ads, no tracking</h2>
