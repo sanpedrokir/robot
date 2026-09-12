@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Persona, VoiceGender } from "@/lib/personas";
-import { defaultVoiceParams } from "@/lib/personas";
+import { defaultVoiceParams, guessVoiceGenderFromText } from "@/lib/personas";
 import { resizeDataUrl } from "@/lib/customPersonas";
 
 export default function CreatePersonaModal({
@@ -13,8 +13,16 @@ export default function CreatePersonaModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [voiceGender, setVoiceGender] = useState<VoiceGender>("male");
+  // Once the user picks a voice themselves, stop overriding it as they keep
+  // typing — the auto-guess is only meant to save a step, not fight them.
+  const [voiceTouched, setVoiceTouched] = useState(false);
   const [status, setStatus] = useState<"idle" | "generating" | "error">("idle");
   const [error, setError] = useState("");
+
+  function handleDescriptionChange(value: string) {
+    setDescription(value);
+    if (!voiceTouched) setVoiceGender(guessVoiceGenderFromText(value));
+  }
 
   async function handleGenerate() {
     if (!name.trim() || !description.trim()) return;
@@ -78,7 +86,7 @@ export default function CreatePersonaModal({
         </label>
         <textarea
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => handleDescriptionChange(e.target.value)}
           placeholder="e.g. a wise old wizard with a long grey beard and a pointy hat"
           disabled={status === "generating"}
           rows={3}
@@ -88,7 +96,10 @@ export default function CreatePersonaModal({
         <label className="mb-1 block text-xs font-medium text-slate-600">Voice</label>
         <select
           value={voiceGender}
-          onChange={(e) => setVoiceGender(e.target.value as VoiceGender)}
+          onChange={(e) => {
+            setVoiceTouched(true);
+            setVoiceGender(e.target.value as VoiceGender);
+          }}
           disabled={status === "generating"}
           className="mb-4 w-full rounded-lg border-2 border-slate-200 px-3 py-2 text-sm text-black outline-none focus:border-sky-400"
         >

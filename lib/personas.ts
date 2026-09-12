@@ -154,3 +154,43 @@ export const defaultVoiceParams: Record<VoiceGender, { pitch: number; rate: numb
   female: { pitch: 1.15, rate: 1.0 },
   child: { pitch: 1.85, rate: 1.25 },
 };
+
+const CHILD_WORDS = ["child", "kid", "toddler", "baby", "little boy", "little girl", "young boy", "young girl", "schoolboy", "schoolgirl"];
+const FEMALE_WORDS = [
+  "lady",
+  "woman",
+  "women",
+  "girl",
+  "female",
+  "queen",
+  "princess",
+  "mother",
+  "grandmother",
+  "grandma",
+  "aunt",
+  "sister",
+  "wife",
+  "actress",
+  "waitress",
+  "witch",
+  "fairy",
+  "mermaid",
+  "nun",
+  "duchess",
+  "empress",
+  "she ",
+  "her ",
+];
+
+/**
+ * Best-effort guess at voice gender from a typed character description, so
+ * the create-persona form can default the voice picker sensibly (e.g. to
+ * Female for "a kind old lady") instead of always defaulting to Male —
+ * still just a starting point the user can override in the dropdown.
+ */
+export function guessVoiceGenderFromText(text: string): VoiceGender {
+  const lower = text.toLowerCase();
+  if (CHILD_WORDS.some((w) => lower.includes(w))) return "child";
+  if (FEMALE_WORDS.some((w) => lower.includes(w))) return "female";
+  return "male";
+}
