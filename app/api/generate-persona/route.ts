@@ -52,7 +52,8 @@ export async function POST(request: Request) {
       client.images.edit({
         model: "gpt-image-1",
         image: baseFile,
-        prompt: "Same exact character, face, and outfit, now with mouth open as if mid-speech, talking. Keep everything else identical.",
+        prompt:
+          "Same exact character, face, and outfit, now with lips just barely parted in a small, subtle, natural talking position — like mid-syllable in a calm conversation. Not shouting, not a wide-open mouth, not an exaggerated expression. A gentle, small gap between the lips only. Keep everything else identical.",
         ...imageParams,
       }),
     ]);
