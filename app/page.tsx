@@ -192,10 +192,9 @@ export default function Home() {
       stopFallbackFlap();
       setMouthOpen(false);
       if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
-      // A quick happy smile after finishing a reply, before settling back
-      // to idle.
+      // A happy smile after finishing a reply, before settling back to idle.
       setRobotState("happy");
-      timers.current.push(setTimeout(() => setRobotState("idle"), 1600));
+      timers.current.push(setTimeout(() => setRobotState("idle"), 3500));
       if (conversationModeRef.current) startListening();
     };
     utterance.onerror = () => {
