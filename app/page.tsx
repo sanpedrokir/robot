@@ -52,6 +52,7 @@ export default function Home() {
 
   function speak(text: string) {
     if (!("speechSynthesis" in window)) {
+      setRobotState("idle");
       if (conversationModeRef.current) startListening();
       return;
     }
@@ -71,6 +72,27 @@ export default function Home() {
     // any) named voice above was actually available on this system.
     utterance.pitch = 1.15;
     utterance.rate = 1.05;
+
+    // Safety net in case this utterance never fires onend (e.g. an
+    // unsupported browser, or the engine silently hangs) — but unlike a
+    // fixed timeout guessed from text length, this is a watchdog that
+    // resets on every real sign of progress (each onboundary event), so
+    // it only ever fires if speech has genuinely stalled, never because a
+    // longer reply simply took more real time than a rough guess assumed
+    // (that used to cut the speaking animation off mid-sentence).
+    let watchdog: ReturnType<typeof setTimeout>;
+    function resetWatchdog() {
+      clearTimeout(watchdog);
+      // Generous on purpose: some voices only report sentence-level (not
+      // per-word) boundaries, and a single long sentence could otherwise
+      // go several seconds between events even while speaking normally.
+      watchdog = setTimeout(() => {
+        setRobotState("idle");
+        setMouthOpen(false);
+        if (conversationModeRef.current) startListening();
+      }, 8000);
+    }
+
     // Flap the mouth open briefly on each word/sentence boundary the
     // browser reports, instead of a fixed CSS animation running non-stop
     // for the whole speaking duration — this tracks actual speech rhythm
@@ -79,19 +101,23 @@ export default function Home() {
       setMouthOpen(true);
       if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       mouthTimerRef.current = setTimeout(() => setMouthOpen(false), 150);
+      resetWatchdog();
     };
     utterance.onend = () => {
+      clearTimeout(watchdog);
       setRobotState("idle");
       setMouthOpen(false);
       if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       if (conversationModeRef.current) startListening();
     };
     utterance.onerror = () => {
+      clearTimeout(watchdog);
       setRobotState("idle");
       setMouthOpen(false);
       if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       if (conversationModeRef.current) startListening();
     };
+    resetWatchdog(); // arm it up front in case boundary/end never fire at all
 
     // Chrome/Edge often report zero voices on the very first call of a
     // page load — getVoices() only populates after an internal async
@@ -238,14 +264,10 @@ export default function Home() {
     ]);
     // Speak the reply either way (including the glitch message) so a
     // hands-free conversation doesn't just stall silently on a failure —
-    // speak()'s onend/onerror is what resumes listening in that mode.
+    // speak()'s onend/onerror (and its internal watchdog) is what resumes
+    // listening in that mode and resets to idle, including on failure.
     setRobotState("speaking");
     speak(replyText);
-    // Safety net in case speechSynthesis never fires onend (e.g. unsupported
-    // browser or it silently fails) — sized to outlast a normal reading of
-    // the reply so it doesn't cut off the speaking animation mid-sentence.
-    const fallbackMs = Math.max(1800, replyText.length * 80);
-    timers.current.push(setTimeout(() => setRobotState("idle"), fallbackMs));
   }
 
   return (
