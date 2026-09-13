@@ -140,14 +140,25 @@ export default function Home() {
     return pool[0] ?? null;
   }
 
-  // A persona created via "Upload a photo" has a specific voiceURI the
-  // user auditioned and picked (see UploadPersonaModal) — prefer that
-  // exact voice over the generic gender-based pick, falling back if it's
-  // unset or the browser no longer reports that voice.
+  // A persona with a specific voiceURI (auditioned and picked via
+  // UploadPersonaModal/EditVoiceModal) prefers that exact voice over the
+  // generic gender-based pick, falling back if it's unset or the browser
+  // no longer reports that voice — or if it confidently belongs to the
+  // opposite gender from what the persona is set to. That mismatch can
+  // happen if a voice got selected under one language's pool, then that
+  // same underlying voice object turned out to also appear in a
+  // different language's pool after switching (a device with no real
+  // voices for a language falls back to showing every voice, which can
+  // overlap with another, unrelated language's real voice list) —
+  // without this check, a stale pick like that would stick permanently.
   function resolveVoice(persona: Persona): SpeechSynthesisVoice | null {
     if (persona.voiceURI) {
       const exact = window.speechSynthesis.getVoices().find((v) => v.voiceURI === persona.voiceURI);
-      if (exact) return exact;
+      if (exact) {
+        const wanted = persona.voiceGender === "child" ? "female" : persona.voiceGender;
+        const actual = classifyVoiceGender(exact);
+        if (actual === null || actual === wanted) return exact;
+      }
     }
     return getVoiceForGender(persona.voiceGender, persona.languageCode || "en-US");
   }

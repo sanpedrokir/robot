@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Persona, VoiceGender } from "@/lib/personas";
 import { defaultVoiceParams, SUPPORTED_LANGUAGES } from "@/lib/personas";
 import { getVoicesForGender } from "@/lib/voices";
@@ -18,13 +18,24 @@ export default function EditVoiceModal({
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(persona.voiceURI ?? null);
+  // A voice valid for one language's pool can also turn up in a different
+  // language's pool (e.g. a device with no real voices for a language
+  // falls back to showing every voice, which can overlap with another,
+  // unrelated language's real list) — so a URI carried over across a
+  // *language* change isn't actually meaningful and must be re-picked
+  // fresh, even though it's fine to preserve across a gender-only change.
+  const prevLanguageRef = useRef(languageCode);
 
   useEffect(() => {
     function refresh() {
       setVoicesLoaded(window.speechSynthesis.getVoices().length > 0);
       const list = getVoicesForGender(voiceGender, languageCode);
       setVoices(list);
-      setSelectedVoiceURI((current) => (current && list.some((v) => v.voiceURI === current) ? current : (list[0]?.voiceURI ?? null)));
+      const languageChanged = prevLanguageRef.current !== languageCode;
+      prevLanguageRef.current = languageCode;
+      setSelectedVoiceURI((current) =>
+        !languageChanged && current && list.some((v) => v.voiceURI === current) ? current : (list[0]?.voiceURI ?? null)
+      );
     }
     refresh();
     window.speechSynthesis.addEventListener("voiceschanged", refresh);
