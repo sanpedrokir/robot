@@ -13,14 +13,21 @@ import type { ChatMessage, RobotState } from "@/lib/types";
 import { personas, defaultPersona, languageLabel, type Persona, type VoiceGender } from "@/lib/personas";
 import { getCustomPersonas, saveCustomPersona, deleteCustomPersona } from "@/lib/customPersonas";
 import { findVoicesForLanguage } from "@/lib/voices";
+import { getPersonaOverrides, savePersonaOverride, applyPersonaOverride, type PersonaOverride } from "@/lib/personaOverrides";
+import EditVoiceModal from "@/components/EditVoiceModal";
 
 const PERSONA_STORAGE_KEY = "selectedPersonaId";
 
 export default function Home() {
   const [personaId, setPersonaId] = useState(defaultPersona.id);
   const [customPersonas, setCustomPersonas] = useState<Persona[]>([]);
+  const [personaOverrides, setPersonaOverrides] = useState<Record<string, PersonaOverride>>({});
+  const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
   const [createStep, setCreateStep] = useState<"none" | "choose" | "describe" | "upload">("none");
-  const allPersonas = [...personas, ...customPersonas];
+  // Overrides let a persona's language/voice be changed after creation —
+  // including Neo, a fixed built-in persona that isn't otherwise editable —
+  // without needing a whole new character (see EditVoiceModal).
+  const allPersonas = [...personas, ...customPersonas].map((p) => applyPersonaOverride(p, personaOverrides));
   const persona = allPersonas.find((p) => p.id === personaId) ?? defaultPersona;
   const personaRef = useRef(persona);
   personaRef.current = persona;
@@ -32,6 +39,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved) setPersonaId(saved);
     getCustomPersonas().then(setCustomPersonas).catch(() => {});
+    setPersonaOverrides(getPersonaOverrides());
   }, []);
 
   function selectPersona(id: string) {
@@ -52,6 +60,13 @@ export default function Home() {
     // Deleting the persona you're currently talking to falls back to Neo
     // rather than leaving the app pointed at an id that no longer exists.
     if (personaId === id) selectPersona(defaultPersona.id);
+  }
+
+  function handleVoiceSaved(override: PersonaOverride) {
+    if (!editingPersona) return;
+    setPersonaOverrides((prev) => ({ ...prev, [editingPersona.id]: override }));
+    savePersonaOverride(editingPersona.id, override);
+    setEditingPersona(null);
   }
 
   const [robotState, setRobotState] = useState<RobotState>("idle");
@@ -414,6 +429,7 @@ export default function Home() {
         onSelect={selectPersona}
         onRequestCreate={() => setCreateStep("choose")}
         onDelete={handlePersonaDeleted}
+        onEditVoice={setEditingPersona}
       />
 
       {createStep === "choose" && (
@@ -428,6 +444,9 @@ export default function Home() {
       )}
       {createStep === "upload" && (
         <UploadPersonaModal onClose={() => setCreateStep("none")} onCreated={handlePersonaCreated} />
+      )}
+      {editingPersona && (
+        <EditVoiceModal persona={editingPersona} onClose={() => setEditingPersona(null)} onSave={handleVoiceSaved} />
       )}
 
       <WhatsAppPanel />

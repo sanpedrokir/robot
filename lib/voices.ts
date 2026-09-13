@@ -53,19 +53,27 @@ export function findVoicesForLanguage(voices: SpeechSynthesisVoice[], languageCo
   return inLanguage.length > 0 ? inLanguage : voices;
 }
 
+export type GenderedVoices = {
+  voices: SpeechSynthesisVoice[];
+  /** False when none of the returned voices could be confidently classified as the requested gender — they're just every voice available in that language, unfiltered, so the UI shouldn't claim they're all e.g. "female". */
+  confident: boolean;
+};
+
 /**
  * Candidate voices for a language + broad gender category, for the user to
  * preview and pick a specific "tone" from. Falls back to every voice in
- * that language if none could be confidently classified, and further to
- * every voice at all if the device has none installed for that language,
- * so there's always something to choose from.
+ * that language if none could be confidently classified — flagged via
+ * `confident: false` so callers can be honest about it rather than
+ * silently presenting an unfiltered list as if it were gender-matched
+ * (classification is a name-string heuristic and often has nothing to go
+ * on for non-English voice names).
  */
-export function getVoicesForGender(gender: VoiceGender, languageCode: string): SpeechSynthesisVoice[] {
+export function getVoicesForGender(gender: VoiceGender, languageCode: string): GenderedVoices {
   const pool = findVoicesForLanguage(window.speechSynthesis.getVoices(), languageCode);
 
   // No mainstream engine has a dedicated child voice — offer the
   // female-leaning pool as candidates, same rationale as personas.ts.
   const wanted = gender === "child" ? "female" : gender;
   const matches = pool.filter((v) => classify(v) === wanted);
-  return matches.length > 0 ? matches : pool;
+  return matches.length > 0 ? { voices: matches, confident: true } : { voices: pool, confident: false };
 }

@@ -8,12 +8,14 @@ export default function PersonaPicker({
   onSelect,
   onRequestCreate,
   onDelete,
+  onEditVoice,
 }: {
   personas: Persona[];
   selectedId: string;
   onSelect: (id: string) => void;
   onRequestCreate: () => void;
   onDelete: (id: string) => void;
+  onEditVoice: (persona: Persona) => void;
 }) {
   const [pendingDelete, setPendingDelete] = useState<Persona | null>(null);
 
@@ -49,6 +51,14 @@ export default function PersonaPicker({
                   ×
                 </button>
               )}
+
+              <button
+                onClick={() => onEditVoice(persona)}
+                title={`${persona.name}'s language & voice`}
+                className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-500 text-[10px] leading-none text-white shadow hover:bg-slate-600"
+              >
+                ⚙
+              </button>
             </div>
           );
         })}
