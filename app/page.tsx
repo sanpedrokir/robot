@@ -180,12 +180,9 @@ export default function Home() {
       .replace(/\s{2,}/g, " ")
       .trim();
     const utterance = new SpeechSynthesisUtterance(spokenText);
-    // Without this, the browser defaults the utterance's language (often
-    // to the page's own locale, effectively English) regardless of which
-    // voice object gets assigned below — feeding a mismatched-language
-    // engine text in a script it isn't set up to read (e.g. Chinese with
-    // an English-defaulted utterance) is exactly what produces garbled,
-    // stuck-in-a-loop-sounding speech rather than a clean failure.
+    // Placeholder until a voice is resolved below, which then sets this to
+    // match that voice's own .lang exactly (see the comment there for why
+    // that matters, rather than just the persona's intended language).
     utterance.lang = personaRef.current.languageCode || "en-US";
     // Pitch/rate come from the selected persona (see personas.ts) so each
     // one reads distinctly — e.g. Kenny lower/slower, Wolfie/Warrior much
@@ -279,9 +276,21 @@ export default function Home() {
     // browser's raw default voice while every later reply (once voices
     // have loaded) correctly gets the preferred one, making the intro
     // sound like a different voice from the rest of the conversation.
+    // A voice's own .lang always wins over the persona's intended
+    // language once one is resolved: when no real voice exists for that
+    // language and resolveVoice falls back to some other voice (see its
+    // comment), telling the engine "this is Chinese" while handing it an
+    // English voice is what made it choke and stop partway through
+    // instead of reading the whole reply — even if imperfectly, in the
+    // fallback voice's own language/accent.
+    function applyVoice(voice: SpeechSynthesisVoice | null) {
+      if (!voice) return;
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    }
+
     if (window.speechSynthesis.getVoices().length > 0) {
-      const voice = resolveVoice(personaRef.current);
-      if (voice) utterance.voice = voice;
+      applyVoice(resolveVoice(personaRef.current));
       startSpeaking();
     } else {
       let spoken = false;
@@ -289,8 +298,7 @@ export default function Home() {
         if (spoken) return; // the voiceschanged listener and the timeout below can both fire
         spoken = true;
         window.speechSynthesis.removeEventListener("voiceschanged", trySpeak);
-        const voice = resolveVoice(personaRef.current);
-        if (voice) utterance.voice = voice;
+        applyVoice(resolveVoice(personaRef.current));
         startSpeaking();
       };
       window.speechSynthesis.addEventListener("voiceschanged", trySpeak);
