@@ -169,6 +169,13 @@ export default function Home() {
       .replace(/\s{2,}/g, " ")
       .trim();
     const utterance = new SpeechSynthesisUtterance(spokenText);
+    // Without this, the browser defaults the utterance's language (often
+    // to the page's own locale, effectively English) regardless of which
+    // voice object gets assigned below — feeding a mismatched-language
+    // engine text in a script it isn't set up to read (e.g. Chinese with
+    // an English-defaulted utterance) is exactly what produces garbled,
+    // stuck-in-a-loop-sounding speech rather than a clean failure.
+    utterance.lang = personaRef.current.languageCode || "en-US";
     // Pitch/rate come from the selected persona (see personas.ts) so each
     // one reads distinctly — e.g. Kenny lower/slower, Wolfie/Warrior much
     // higher to approximate a child's voice.

@@ -59,6 +59,22 @@ export const personas: Persona[] = [
     languageCode: "en-US",
     available: true,
   },
+  {
+    id: "elodie",
+    name: "Elodie",
+    description: "Elodie, always up for a chat.",
+    role: "a warm and chatty AI companion",
+    images: {
+      closed: "/personas/elodie/closed.png",
+      smile: "/personas/elodie/smile.png",
+      talk: "/personas/elodie/talk.png",
+    },
+    voiceGender: "female",
+    pitch: 1.15,
+    rate: 1.0,
+    languageCode: "en-US",
+    available: true,
+  },
 ];
 
 export const defaultPersona = personas[0];
