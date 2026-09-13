@@ -129,13 +129,20 @@ export default function Home() {
     // English) — fall back to the shared classifier (lib/voices.ts), which
     // also knows other languages' naming conventions (e.g. Mandarin's
     // "Xiao"=female/"Yun"=male) and Android/Chrome's internal
-    // "#female_"/"#male_" voice names, before giving up and grabbing
-    // whatever the first voice happens to be (which was silently making
-    // every persona of that gender sound identical to whichever voice
-    // came first on these devices/languages).
+    // "#female_"/"#male_" voice names.
     const wanted = gender === "child" ? "female" : gender; // "child" also prefers a female-leaning voice, see comment above
+    const opposite = wanted === "male" ? "female" : "male";
     const classified = pool.find((v) => classifyVoiceGender(v) === wanted);
     if (classified) return classified;
+
+    // No voice confidently matches — rather than grabbing whatever's
+    // first (which could just as easily be confidently the *opposite*
+    // gender, e.g. Neo ending up on a voice we can tell is female), a
+    // gender-unknown voice is a safer bet than a known-wrong one. Only if
+    // every voice on the device is confidently the opposite gender does
+    // this fall through to genuinely having no good option.
+    const unknown = pool.find((v) => classifyVoiceGender(v) !== opposite);
+    if (unknown) return unknown;
 
     return pool[0] ?? null;
   }
