@@ -8,6 +8,8 @@ export type Persona = {
   role: string;
   images: { closed: string; smile: string; talk: string };
   voiceGender: VoiceGender;
+  /** A specific browser voice's voiceURI, chosen by the user from candidates for voiceGender. Falls back to auto-picking one for voiceGender if unset or no longer available. */
+  voiceURI?: string;
   pitch: number;
   rate: number;
   /** Ready to show/select. Personas awaiting art assets stay hidden until flipped on. */

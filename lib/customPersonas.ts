@@ -44,8 +44,18 @@ export async function deleteCustomPersona(id: string): Promise<void> {
   });
 }
 
+/** Reads a File (e.g. from an <input type="file">) into a data: URL. */
+export function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 /**
- * The generation API returns full-size (1024x1024) PNGs, far bigger than
+ * Generated images and uploaded photos both tend to be far bigger than
  * needed for a face shown at up to 224px — downscale before storing so
  * IndexedDB and rendering stay light.
  */

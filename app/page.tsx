@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import RobotFace from "@/components/RobotFace";
 import PersonaPicker from "@/components/PersonaPicker";
+import ChooseCreateMode from "@/components/ChooseCreateMode";
 import CreatePersonaModal from "@/components/CreatePersonaModal";
+import UploadPersonaModal from "@/components/UploadPersonaModal";
 import ChatBox from "@/components/ChatBox";
 import WhatsAppPanel from "@/components/WhatsAppPanel";
 import MusicPlayer from "@/components/MusicPlayer";
@@ -16,7 +18,7 @@ const PERSONA_STORAGE_KEY = "selectedPersonaId";
 export default function Home() {
   const [personaId, setPersonaId] = useState(defaultPersona.id);
   const [customPersonas, setCustomPersonas] = useState<Persona[]>([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createStep, setCreateStep] = useState<"none" | "choose" | "describe" | "upload">("none");
   const allPersonas = [...personas, ...customPersonas];
   const persona = allPersonas.find((p) => p.id === personaId) ?? defaultPersona;
   const personaRef = useRef(persona);
@@ -40,7 +42,7 @@ export default function Home() {
     setCustomPersonas((prev) => [...prev, newPersona]);
     saveCustomPersona(newPersona).catch(() => {});
     selectPersona(newPersona.id);
-    setShowCreateModal(false);
+    setCreateStep("none");
   }
 
   function handlePersonaDeleted(id: string) {
@@ -122,6 +124,18 @@ export default function Home() {
     if (byGenderWord) return byGenderWord;
 
     return englishVoices[0] ?? null;
+  }
+
+  // A persona created via "Upload a photo" has a specific voiceURI the
+  // user auditioned and picked (see UploadPersonaModal) — prefer that
+  // exact voice over the generic gender-based pick, falling back if it's
+  // unset or the browser no longer reports that voice.
+  function resolveVoice(persona: Persona): SpeechSynthesisVoice | null {
+    if (persona.voiceURI) {
+      const exact = window.speechSynthesis.getVoices().find((v) => v.voiceURI === persona.voiceURI);
+      if (exact) return exact;
+    }
+    return getVoiceForGender(persona.voiceGender);
   }
 
   function speak(text: string) {
@@ -234,7 +248,7 @@ export default function Home() {
     // have loaded) correctly gets the preferred one, making the intro
     // sound like a different voice from the rest of the conversation.
     if (window.speechSynthesis.getVoices().length > 0) {
-      const voice = getVoiceForGender(personaRef.current.voiceGender);
+      const voice = resolveVoice(personaRef.current);
       if (voice) utterance.voice = voice;
       startSpeaking();
     } else {
@@ -243,7 +257,7 @@ export default function Home() {
         if (spoken) return; // the voiceschanged listener and the timeout below can both fire
         spoken = true;
         window.speechSynthesis.removeEventListener("voiceschanged", trySpeak);
-        const voice = getVoiceForGender(personaRef.current.voiceGender);
+        const voice = resolveVoice(personaRef.current);
         if (voice) utterance.voice = voice;
         startSpeaking();
       };
@@ -391,12 +405,22 @@ export default function Home() {
         personas={allPersonas}
         selectedId={personaId}
         onSelect={selectPersona}
-        onRequestCreate={() => setShowCreateModal(true)}
+        onRequestCreate={() => setCreateStep("choose")}
         onDelete={handlePersonaDeleted}
       />
 
-      {showCreateModal && (
-        <CreatePersonaModal onClose={() => setShowCreateModal(false)} onCreated={handlePersonaCreated} />
+      {createStep === "choose" && (
+        <ChooseCreateMode
+          onDescribe={() => setCreateStep("describe")}
+          onUpload={() => setCreateStep("upload")}
+          onClose={() => setCreateStep("none")}
+        />
+      )}
+      {createStep === "describe" && (
+        <CreatePersonaModal onClose={() => setCreateStep("none")} onCreated={handlePersonaCreated} />
+      )}
+      {createStep === "upload" && (
+        <UploadPersonaModal onClose={() => setCreateStep("none")} onCreated={handlePersonaCreated} />
       )}
 
       <WhatsAppPanel />
