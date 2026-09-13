@@ -16,14 +16,14 @@ export default function EditVoiceModal({
   const [languageCode, setLanguageCode] = useState(persona.languageCode || "en-US");
   const [voiceGender, setVoiceGender] = useState<VoiceGender>(persona.voiceGender);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voicesConfident, setVoicesConfident] = useState(true);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(persona.voiceURI ?? null);
 
   useEffect(() => {
     function refresh() {
-      const { voices: list, confident } = getVoicesForGender(voiceGender, languageCode);
+      setVoicesLoaded(window.speechSynthesis.getVoices().length > 0);
+      const list = getVoicesForGender(voiceGender, languageCode);
       setVoices(list);
-      setVoicesConfident(confident);
       setSelectedVoiceURI((current) => (current && list.some((v) => v.voiceURI === current) ? current : (list[0]?.voiceURI ?? null)));
     }
     refresh();
@@ -97,13 +97,14 @@ export default function EditVoiceModal({
               <span>▶</span>
             </button>
           ))}
-          {voices.length === 0 && <p className="text-xs text-slate-400">Loading voices…</p>}
+          {voices.length === 0 && !voicesLoaded && <p className="text-xs text-slate-400">Loading voices…</p>}
+          {voices.length === 0 && voicesLoaded && (
+            <p className="text-xs text-slate-400">
+              No installed {voiceGender} voice found for this language — it&apos;ll use your device&apos;s default voice for this language instead.
+            </p>
+          )}
         </div>
-        <p className="mb-4 text-[11px] text-slate-400">
-          {!voicesConfident
-            ? `Couldn't tell which installed voice is ${voiceGender} for this language — showing all ${voices.length} available voice${voices.length === 1 ? "" : "s"} below, so preview each to find one that fits.`
-            : "Voice options depend on what's installed on this device."}
-        </p>
+        <p className="mb-4 text-[11px] text-slate-400">Voice options depend on what&apos;s installed on this device.</p>
 
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">

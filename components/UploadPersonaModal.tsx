@@ -16,7 +16,7 @@ export default function UploadPersonaModal({
   const [languageCode, setLanguageCode] = useState("en-US");
   const [voiceGender, setVoiceGender] = useState<VoiceGender>("male");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voicesConfident, setVoicesConfident] = useState(true);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -25,9 +25,9 @@ export default function UploadPersonaModal({
   // fires, and again whenever the chosen language or gender changes.
   useEffect(() => {
     function refresh() {
-      const { voices: list, confident } = getVoicesForGender(voiceGender, languageCode);
+      setVoicesLoaded(window.speechSynthesis.getVoices().length > 0);
+      const list = getVoicesForGender(voiceGender, languageCode);
       setVoices(list);
-      setVoicesConfident(confident);
       setSelectedVoiceURI((current) => (current && list.some((v) => v.voiceURI === current) ? current : (list[0]?.voiceURI ?? null)));
     }
     refresh();
@@ -136,15 +136,14 @@ export default function UploadPersonaModal({
               <span>▶</span>
             </button>
           ))}
-          {voices.length === 0 && <p className="text-xs text-slate-400">Loading voices…</p>}
+          {voices.length === 0 && !voicesLoaded && <p className="text-xs text-slate-400">Loading voices…</p>}
+          {voices.length === 0 && voicesLoaded && (
+            <p className="text-xs text-slate-400">
+              No installed {voiceGender} voice found for this language — it&apos;ll use your device&apos;s default voice for this language instead.
+            </p>
+          )}
         </div>
-        <p className="mb-4 text-[11px] text-slate-400">
-          {!voicesConfident
-            ? `Couldn't tell which installed voice is ${voiceGender} for this language — showing all ${voices.length} available voice${voices.length === 1 ? "" : "s"} below, so preview each to find one that fits.`
-            : languageCode !== "en-US"
-              ? "Voice options depend on what's installed on this device — some languages may only offer one or two tones here, even if English has several."
-              : "Voice options depend on what's installed on this device."}
-        </p>
+        <p className="mb-4 text-[11px] text-slate-400">Voice options depend on what&apos;s installed on this device.</p>
 
         {error && <p className="mb-3 text-xs text-red-500">{error}</p>}
 
