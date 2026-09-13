@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Persona, VoiceGender } from "@/lib/personas";
-import { defaultVoiceParams, SUPPORTED_LANGUAGES } from "@/lib/personas";
+import { defaultVoiceParams, DEEP_VOICE_PITCH_FACTOR, SUPPORTED_LANGUAGES } from "@/lib/personas";
 import { fileToDataUrl, resizeDataUrl } from "@/lib/customPersonas";
 import { getVoicesForGender } from "@/lib/voices";
 
@@ -15,9 +15,12 @@ export default function UploadPersonaModal({
   const [photo, setPhoto] = useState<string | null>(null);
   const [languageCode, setLanguageCode] = useState("en-US");
   const [voiceGender, setVoiceGender] = useState<VoiceGender>("male");
+  const [deepVoice, setDeepVoice] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  const pitch = defaultVoiceParams[voiceGender].pitch * (deepVoice ? DEEP_VOICE_PITCH_FACTOR : 1);
 
   // getVoices() can return an empty list until the browser's async voice
   // fetch completes (signaled by "voiceschanged") — refresh once that
@@ -45,11 +48,11 @@ export default function UploadPersonaModal({
     }
   }
 
-  function previewVoice(voice: SpeechSynthesisVoice) {
+  function previewVoice(voice: SpeechSynthesisVoice, pitchOverride = pitch) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance("Hi, this is how I sound.");
     utterance.voice = voice;
-    utterance.pitch = defaultVoiceParams[voiceGender].pitch;
+    utterance.pitch = pitchOverride;
     utterance.rate = defaultVoiceParams[voiceGender].rate;
     window.speechSynthesis.speak(utterance);
   }
@@ -67,6 +70,7 @@ export default function UploadPersonaModal({
       voiceURI: selectedVoice?.voiceURI,
       languageCode,
       ...defaultVoiceParams[voiceGender],
+      pitch,
       available: true,
     };
     onCreated(persona);
@@ -116,6 +120,22 @@ export default function UploadPersonaModal({
           <option value="female">Female voice</option>
           <option value="child">Child voice</option>
         </select>
+
+        {voiceGender !== "child" && (
+          <label className="mb-3 flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={deepVoice}
+              onChange={(e) => {
+                setDeepVoice(e.target.checked);
+                const selectedVoice = voices.find((v) => v.voiceURI === selectedVoiceURI);
+                const newPitch = defaultVoiceParams[voiceGender].pitch * (e.target.checked ? DEEP_VOICE_PITCH_FACTOR : 1);
+                if (selectedVoice) previewVoice(selectedVoice, newPitch);
+              }}
+            />
+            Deeper voice
+          </label>
+        )}
 
         <label className="mb-1 block text-xs font-medium text-slate-600">Pick the tone closest to what you want</label>
         <div className="mb-2 flex max-h-40 flex-col gap-2 overflow-y-auto">

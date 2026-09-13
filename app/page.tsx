@@ -12,6 +12,7 @@ import MusicPlayer from "@/components/MusicPlayer";
 import type { ChatMessage, RobotState } from "@/lib/types";
 import { personas, defaultPersona, languageLabel, type Persona, type VoiceGender } from "@/lib/personas";
 import { getCustomPersonas, saveCustomPersona, deleteCustomPersona } from "@/lib/customPersonas";
+import { findVoicesForLanguage } from "@/lib/voices";
 
 const PERSONA_STORAGE_KEY = "selectedPersonaId";
 
@@ -98,17 +99,11 @@ export default function Home() {
     const voices = window.speechSynthesis.getVoices();
     if (voices.length === 0) return null; // not loaded yet — caller falls back to pitch/rate only
 
-    // Match on the primary language subtag (e.g. "es" from "es-ES") rather
-    // than the exact region, since a device's installed voice might be a
-    // different regional variant than the one requested. Falls back to
-    // every voice if none are installed for that language at all.
-    const primary = languageCode.split("-")[0].toLowerCase();
-    const inLanguage = voices.filter((v) => v.lang.toLowerCase().startsWith(primary));
-    const pool = inLanguage.length > 0 ? inLanguage : voices;
+    const pool = findVoicesForLanguage(voices, languageCode);
 
     // The named desktop voice list is English-specific — only useful when
     // that's actually the requested language.
-    if (primary === "en") {
+    if (languageCode.toLowerCase().startsWith("en")) {
       for (const name of voiceNamesByGender[gender]) {
         const match = pool.find((v) => v.name.includes(name));
         if (match) return match;

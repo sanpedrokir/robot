@@ -35,6 +35,25 @@ function classify(voice: SpeechSynthesisVoice): "male" | "female" | null {
 }
 
 /**
+ * Picks the best-matching pool of voices for a language code: an exact
+ * regional match first, then any voice sharing just the primary subtag
+ * (e.g. "es" from "es-ES", to still match an "es-MX" voice), then every
+ * voice as a last resort. The exact match matters most for language pairs
+ * that share a primary subtag but aren't mutually intelligible — "zh-HK"
+ * (Cantonese) vs "zh-CN" (Mandarin) — where falling back to prefix
+ * matching alone would happily hand a Cantonese persona a Mandarin voice.
+ */
+export function findVoicesForLanguage(voices: SpeechSynthesisVoice[], languageCode: string): SpeechSynthesisVoice[] {
+  const lower = languageCode.toLowerCase();
+  const exact = voices.filter((v) => v.lang.toLowerCase() === lower);
+  if (exact.length > 0) return exact;
+
+  const primary = lower.split("-")[0];
+  const inLanguage = voices.filter((v) => v.lang.toLowerCase().startsWith(primary));
+  return inLanguage.length > 0 ? inLanguage : voices;
+}
+
+/**
  * Candidate voices for a language + broad gender category, for the user to
  * preview and pick a specific "tone" from. Falls back to every voice in
  * that language if none could be confidently classified, and further to
@@ -42,13 +61,7 @@ function classify(voice: SpeechSynthesisVoice): "male" | "female" | null {
  * so there's always something to choose from.
  */
 export function getVoicesForGender(gender: VoiceGender, languageCode: string): SpeechSynthesisVoice[] {
-  const allVoices = window.speechSynthesis.getVoices();
-  // Match on the primary language subtag (e.g. "es" from "es-ES") rather
-  // than the exact region, since a device's installed voice might be a
-  // different regional variant (e.g. "es-MX") than the one requested.
-  const primary = languageCode.split("-")[0].toLowerCase();
-  const inLanguage = allVoices.filter((v) => v.lang.toLowerCase().startsWith(primary));
-  const pool = inLanguage.length > 0 ? inLanguage : allVoices;
+  const pool = findVoicesForLanguage(window.speechSynthesis.getVoices(), languageCode);
 
   // No mainstream engine has a dedicated child voice — offer the
   // female-leaning pool as candidates, same rationale as personas.ts.

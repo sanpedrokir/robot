@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Persona, VoiceGender } from "@/lib/personas";
-import { defaultVoiceParams, guessVoiceGenderFromText, SUPPORTED_LANGUAGES } from "@/lib/personas";
+import { defaultVoiceParams, DEEP_VOICE_PITCH_FACTOR, guessVoiceGenderFromText, SUPPORTED_LANGUAGES } from "@/lib/personas";
 import { resizeDataUrl } from "@/lib/customPersonas";
 
 export default function CreatePersonaModal({
@@ -14,6 +14,7 @@ export default function CreatePersonaModal({
   const [description, setDescription] = useState("");
   const [languageCode, setLanguageCode] = useState("en-US");
   const [voiceGender, setVoiceGender] = useState<VoiceGender>("male");
+  const [deepVoice, setDeepVoice] = useState(false);
   // Once the user picks a voice themselves, stop overriding it as they keep
   // typing — the auto-guess is only meant to save a step, not fight them.
   const [voiceTouched, setVoiceTouched] = useState(false);
@@ -59,6 +60,7 @@ export default function CreatePersonaModal({
         voiceGender,
         languageCode,
         ...defaultVoiceParams[voiceGender],
+        pitch: defaultVoiceParams[voiceGender].pitch * (deepVoice ? DEEP_VOICE_PITCH_FACTOR : 1),
         available: true,
       };
       onCreated(persona);
@@ -123,6 +125,12 @@ export default function CreatePersonaModal({
           <option value="female">Female voice</option>
           <option value="child">Child voice</option>
         </select>
+        {voiceGender !== "child" && (
+          <label className="mb-3 flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={deepVoice} onChange={(e) => setDeepVoice(e.target.checked)} disabled={status === "generating"} />
+            Deeper voice
+          </label>
+        )}
         <p className="mb-3 text-[11px] text-slate-400">
           {languageCode !== "en-US"
             ? "Voice options depend on what's installed on this device — some languages may only offer one or two voices, even if English has several."
