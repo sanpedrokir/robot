@@ -29,7 +29,7 @@ export const SUPPORTED_LANGUAGES: Language[] = [
   { code: "pt-PT", label: "Portuguese" },
   { code: "ja-JP", label: "Japanese" },
   { code: "ko-KR", label: "Korean" },
-  { code: "zh-CN", label: "Mandarin Chinese" },
+  { code: "zh-CN", label: "Chinese" },
   { code: "zh-HK", label: "Cantonese" },
   { code: "hi-IN", label: "Hindi" },
   { code: "ar-SA", label: "Arabic" },
