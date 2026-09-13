@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Persona, VoiceGender } from "@/lib/personas";
-import { defaultVoiceParams, DEEP_VOICE_PITCH_FACTOR, SUPPORTED_LANGUAGES } from "@/lib/personas";
+import { defaultVoiceParams, SUPPORTED_LANGUAGES } from "@/lib/personas";
 import { getVoicesForGender } from "@/lib/voices";
 import type { PersonaOverride } from "@/lib/personaOverrides";
 
@@ -15,12 +15,9 @@ export default function EditVoiceModal({
 }) {
   const [languageCode, setLanguageCode] = useState(persona.languageCode || "en-US");
   const [voiceGender, setVoiceGender] = useState<VoiceGender>(persona.voiceGender);
-  const [deepVoice, setDeepVoice] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voicesConfident, setVoicesConfident] = useState(true);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(persona.voiceURI ?? null);
-
-  const pitch = defaultVoiceParams[voiceGender].pitch * (deepVoice ? DEEP_VOICE_PITCH_FACTOR : 1);
 
   useEffect(() => {
     function refresh() {
@@ -34,11 +31,11 @@ export default function EditVoiceModal({
     return () => window.speechSynthesis.removeEventListener("voiceschanged", refresh);
   }, [voiceGender, languageCode]);
 
-  function previewVoice(voice: SpeechSynthesisVoice, pitchOverride = pitch) {
+  function previewVoice(voice: SpeechSynthesisVoice) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance("Hi, this is how I sound.");
     utterance.voice = voice;
-    utterance.pitch = pitchOverride;
+    utterance.pitch = defaultVoiceParams[voiceGender].pitch;
     utterance.rate = defaultVoiceParams[voiceGender].rate;
     window.speechSynthesis.speak(utterance);
   }
@@ -49,7 +46,7 @@ export default function EditVoiceModal({
       languageCode,
       voiceGender,
       voiceURI: selectedVoice?.voiceURI,
-      pitch,
+      pitch: defaultVoiceParams[voiceGender].pitch,
       rate: defaultVoiceParams[voiceGender].rate,
     });
   }
@@ -82,22 +79,6 @@ export default function EditVoiceModal({
           <option value="female">Female voice</option>
           <option value="child">Child voice</option>
         </select>
-
-        {voiceGender !== "child" && (
-          <label className="mb-3 flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={deepVoice}
-              onChange={(e) => {
-                setDeepVoice(e.target.checked);
-                const selectedVoice = voices.find((v) => v.voiceURI === selectedVoiceURI);
-                const newPitch = defaultVoiceParams[voiceGender].pitch * (e.target.checked ? DEEP_VOICE_PITCH_FACTOR : 1);
-                if (selectedVoice) previewVoice(selectedVoice, newPitch);
-              }}
-            />
-            Deeper voice
-          </label>
-        )}
 
         <label className="mb-1 block text-xs font-medium text-slate-600">Pick the tone closest to what you want</label>
         <div className="mb-2 flex max-h-40 flex-col gap-2 overflow-y-auto">

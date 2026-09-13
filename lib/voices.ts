@@ -4,9 +4,28 @@ import type { VoiceGender } from "@/lib/personas";
 // gender on a voice, so this is a best-effort classification combining
 // known desktop voice names with the literal "female"/"male" substring
 // Android/Chrome's local TTS voices embed in their internal names (e.g.
-// "en-us-x-sfg#female_1-local"). The named lists are English-specific but
-// harmless to check for other languages too — they simply won't match.
-const MALE_NAMES = ["Guy", "David", "Daniel", "Alex", "Google UK English Male", "Fred", "Mark", "Ryan", "Tom"];
+// "en-us-x-sfg#female_1-local"), plus naming conventions for other
+// languages' common neural voices, where a literal "female"/"male"
+// substring is never present at all (e.g. Microsoft/Edge's Mandarin
+// voices — "Xiaoxiao", "Yunxi" — carry no such marker, so without this
+// they'd all classify as unknown and the picker would fall back to an
+// unfiltered, gender-mixed list regardless of what was requested).
+const MALE_NAMES = [
+  "Guy",
+  "David",
+  "Daniel",
+  "Alex",
+  "Google UK English Male",
+  "Fred",
+  "Mark",
+  "Ryan",
+  "Tom",
+  // Microsoft/Edge Mandarin (zh-CN) neural voices are conventionally
+  // named "Yun*" for male, "Xiao*" for female (see FEMALE_NAMES).
+  "Yun",
+  // Microsoft/Edge Cantonese (zh-HK) male neural voice.
+  "WanLung",
+];
 const FEMALE_NAMES = [
   "Aria",
   "Jenny",
@@ -21,9 +40,12 @@ const FEMALE_NAMES = [
   "Fiona",
   "Moira",
   "Tessa",
+  "Xiao",
+  "HiuMaan",
+  "HiuGaai",
 ];
 
-function classify(voice: SpeechSynthesisVoice): "male" | "female" | null {
+export function classifyVoiceGender(voice: SpeechSynthesisVoice): "male" | "female" | null {
   const n = voice.name.toLowerCase();
   // "female" checked first: it's a substring of "male", so a naive
   // male-only check would misclassify a female-labeled voice.
@@ -74,6 +96,6 @@ export function getVoicesForGender(gender: VoiceGender, languageCode: string): G
   // No mainstream engine has a dedicated child voice — offer the
   // female-leaning pool as candidates, same rationale as personas.ts.
   const wanted = gender === "child" ? "female" : gender;
-  const matches = pool.filter((v) => classify(v) === wanted);
+  const matches = pool.filter((v) => classifyVoiceGender(v) === wanted);
   return matches.length > 0 ? { voices: matches, confident: true } : { voices: pool, confident: false };
 }

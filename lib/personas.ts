@@ -79,9 +79,6 @@ export const defaultVoiceParams: Record<VoiceGender, { pitch: number; rate: numb
   child: { pitch: 1.85, rate: 1.25 },
 };
 
-/** Multiplier applied to pitch when the user opts for a deeper-sounding voice. Not offered for "child", which is intentionally high-pitched. */
-export const DEEP_VOICE_PITCH_FACTOR = 0.8;
-
 const CHILD_WORDS = ["child", "kid", "toddler", "baby", "little boy", "little girl", "young boy", "young girl", "schoolboy", "schoolgirl"];
 const FEMALE_WORDS = [
   "lady",

@@ -12,7 +12,7 @@ import MusicPlayer from "@/components/MusicPlayer";
 import type { ChatMessage, RobotState } from "@/lib/types";
 import { personas, defaultPersona, languageLabel, type Persona, type VoiceGender } from "@/lib/personas";
 import { getCustomPersonas, saveCustomPersona, deleteCustomPersona } from "@/lib/customPersonas";
-import { findVoicesForLanguage } from "@/lib/voices";
+import { findVoicesForLanguage, classifyVoiceGender } from "@/lib/voices";
 import { getPersonaOverrides, savePersonaOverride, applyPersonaOverride, type PersonaOverride } from "@/lib/personaOverrides";
 import EditVoiceModal from "@/components/EditVoiceModal";
 
@@ -126,23 +126,16 @@ export default function Home() {
     }
 
     // None of the known desktop voice names matched (or this isn't
-    // English) — likely mobile/Android Chrome, whose local TTS voices use
-    // internal names like "en-us-x-sfg#female_1-local" instead of a
-    // human-readable one. Those still embed the gender as a literal
-    // substring, just not one of the proper names above, so check for
-    // that before giving up and grabbing whatever the first voice happens
-    // to be (which was silently making every non-male persona sound
-    // identical to whichever voice came first on these devices).
-    const wantsFemale = gender !== "male"; // "child" also prefers a female-leaning voice, see comment above
-    const byGenderWord = pool.find((v) => {
-      const n = v.name.toLowerCase();
-      // Check "female" first: it's a substring of "male", so a naive
-      // male-only check would misclassify a female-labeled voice.
-      if (n.includes("female")) return wantsFemale;
-      if (n.includes("male")) return !wantsFemale;
-      return false;
-    });
-    if (byGenderWord) return byGenderWord;
+    // English) — fall back to the shared classifier (lib/voices.ts), which
+    // also knows other languages' naming conventions (e.g. Mandarin's
+    // "Xiao"=female/"Yun"=male) and Android/Chrome's internal
+    // "#female_"/"#male_" voice names, before giving up and grabbing
+    // whatever the first voice happens to be (which was silently making
+    // every persona of that gender sound identical to whichever voice
+    // came first on these devices/languages).
+    const wanted = gender === "child" ? "female" : gender; // "child" also prefers a female-leaning voice, see comment above
+    const classified = pool.find((v) => classifyVoiceGender(v) === wanted);
+    if (classified) return classified;
 
     return pool[0] ?? null;
   }
