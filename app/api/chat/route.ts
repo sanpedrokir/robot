@@ -5,9 +5,9 @@ import { sendWhatsAppMessage, isWhatsAppAvailable } from "@/lib/whatsapp";
 import { searchYoutubeVideoId } from "@/lib/youtube";
 import { defaultPersona } from "@/lib/personas";
 
-function buildInstructions(name: string, role: string) {
+function buildInstructions(name: string, role: string, language: string) {
   return `You are ${name}, ${role}.
-You are curious, helpful and slightly playful.
+${language === "English" ? "" : `Always reply in ${language}, regardless of what language the user writes in.\n`}You are curious, helpful and slightly playful.
 Keep your responses short and conversational.
 You enjoy helping your human learn and build things.
 Respond naturally rather than sounding like a formal chatbot.
@@ -146,7 +146,7 @@ const MAX_TOOL_ROUNDS = 4;
 
 export async function POST(request: Request) {
   try {
-    const { messages, personaName, personaRole } = await request.json();
+    const { messages, personaName, personaRole, personaLanguage } = await request.json();
 
     if (!Array.isArray(messages) || messages.length === 0 || !messages.every(isChatTurn)) {
       return NextResponse.json(
@@ -164,7 +164,8 @@ export async function POST(request: Request) {
     // fixed id) is the source of truth for custom, user-created personas.
     const name = typeof personaName === "string" && personaName.trim() ? personaName.trim().slice(0, 40) : defaultPersona.name;
     const role = typeof personaRole === "string" && personaRole.trim() ? personaRole.trim().slice(0, 300) : defaultPersona.role;
-    const instructions = buildInstructions(name, role);
+    const language = typeof personaLanguage === "string" && personaLanguage.trim() ? personaLanguage.trim().slice(0, 40) : "English";
+    const instructions = buildInstructions(name, role, language);
 
     // Passing the whole conversation as `input` (instead of one string) is
     // what gives the persona memory of earlier turns — OpenAI sees the full

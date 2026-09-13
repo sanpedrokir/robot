@@ -12,9 +12,34 @@ export type Persona = {
   voiceURI?: string;
   pitch: number;
   rate: number;
+  /** BCP-47 code (e.g. "es-ES") the persona speaks/listens/replies in. Defaults to English for personas created before this existed. */
+  languageCode: string;
   /** Ready to show/select. Personas awaiting art assets stay hidden until flipped on. */
   available: boolean;
 };
+
+export type Language = { code: string; label: string };
+
+export const SUPPORTED_LANGUAGES: Language[] = [
+  { code: "en-US", label: "English" },
+  { code: "es-ES", label: "Spanish" },
+  { code: "fr-FR", label: "French" },
+  { code: "de-DE", label: "German" },
+  { code: "it-IT", label: "Italian" },
+  { code: "pt-PT", label: "Portuguese" },
+  { code: "ja-JP", label: "Japanese" },
+  { code: "ko-KR", label: "Korean" },
+  { code: "zh-CN", label: "Mandarin Chinese" },
+  { code: "hi-IN", label: "Hindi" },
+  { code: "ar-SA", label: "Arabic" },
+  { code: "ms-MY", label: "Malay" },
+  { code: "id-ID", label: "Indonesian" },
+  { code: "fil-PH", label: "Filipino (Tagalog)" },
+];
+
+export function languageLabel(code: string): string {
+  return SUPPORTED_LANGUAGES.find((l) => l.code === code)?.label ?? "English";
+}
 
 export const personas: Persona[] = [
   {
@@ -30,6 +55,7 @@ export const personas: Persona[] = [
     voiceGender: "male",
     pitch: 1.15,
     rate: 1.05,
+    languageCode: "en-US",
     available: true,
   },
 ];

@@ -10,7 +10,7 @@ import ChatBox from "@/components/ChatBox";
 import WhatsAppPanel from "@/components/WhatsAppPanel";
 import MusicPlayer from "@/components/MusicPlayer";
 import type { ChatMessage, RobotState } from "@/lib/types";
-import { personas, defaultPersona, type Persona, type VoiceGender } from "@/lib/personas";
+import { personas, defaultPersona, languageLabel, type Persona, type VoiceGender } from "@/lib/personas";
 import { getCustomPersonas, saveCustomPersona, deleteCustomPersona } from "@/lib/customPersonas";
 
 const PERSONA_STORAGE_KEY = "selectedPersonaId";
@@ -94,26 +94,37 @@ export default function Home() {
     child: ["Aria", "Jenny", "Samantha", "Zira", "Susan", "Karen", "Linda"],
   };
 
-  function getVoiceForGender(gender: VoiceGender): SpeechSynthesisVoice | null {
+  function getVoiceForGender(gender: VoiceGender, languageCode: string): SpeechSynthesisVoice | null {
     const voices = window.speechSynthesis.getVoices();
     if (voices.length === 0) return null; // not loaded yet — caller falls back to pitch/rate only
-    const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
 
-    for (const name of voiceNamesByGender[gender]) {
-      const match = englishVoices.find((v) => v.name.includes(name));
-      if (match) return match;
+    // Match on the primary language subtag (e.g. "es" from "es-ES") rather
+    // than the exact region, since a device's installed voice might be a
+    // different regional variant than the one requested. Falls back to
+    // every voice if none are installed for that language at all.
+    const primary = languageCode.split("-")[0].toLowerCase();
+    const inLanguage = voices.filter((v) => v.lang.toLowerCase().startsWith(primary));
+    const pool = inLanguage.length > 0 ? inLanguage : voices;
+
+    // The named desktop voice list is English-specific — only useful when
+    // that's actually the requested language.
+    if (primary === "en") {
+      for (const name of voiceNamesByGender[gender]) {
+        const match = pool.find((v) => v.name.includes(name));
+        if (match) return match;
+      }
     }
 
-    // None of the known desktop voice names matched — likely mobile/Android
-    // Chrome, whose local TTS voices use internal names like
-    // "en-us-x-sfg#female_1-local" instead of a human-readable one. Those
-    // still embed the gender as a literal substring, just not one of the
-    // proper names above, so check for that before giving up and grabbing
-    // whatever the first English voice happens to be (which was silently
-    // making every non-male persona sound identical to whichever voice
-    // came first on these devices).
+    // None of the known desktop voice names matched (or this isn't
+    // English) — likely mobile/Android Chrome, whose local TTS voices use
+    // internal names like "en-us-x-sfg#female_1-local" instead of a
+    // human-readable one. Those still embed the gender as a literal
+    // substring, just not one of the proper names above, so check for
+    // that before giving up and grabbing whatever the first voice happens
+    // to be (which was silently making every non-male persona sound
+    // identical to whichever voice came first on these devices).
     const wantsFemale = gender !== "male"; // "child" also prefers a female-leaning voice, see comment above
-    const byGenderWord = englishVoices.find((v) => {
+    const byGenderWord = pool.find((v) => {
       const n = v.name.toLowerCase();
       // Check "female" first: it's a substring of "male", so a naive
       // male-only check would misclassify a female-labeled voice.
@@ -123,7 +134,7 @@ export default function Home() {
     });
     if (byGenderWord) return byGenderWord;
 
-    return englishVoices[0] ?? null;
+    return pool[0] ?? null;
   }
 
   // A persona created via "Upload a photo" has a specific voiceURI the
@@ -135,7 +146,7 @@ export default function Home() {
       const exact = window.speechSynthesis.getVoices().find((v) => v.voiceURI === persona.voiceURI);
       if (exact) return exact;
     }
-    return getVoiceForGender(persona.voiceGender);
+    return getVoiceForGender(persona.voiceGender, persona.languageCode || "en-US");
   }
 
   function speak(text: string) {
@@ -287,7 +298,7 @@ export default function Home() {
     }
 
     const recognition = new SpeechRecognitionCtor();
-    recognition.lang = "en-US";
+    recognition.lang = personaRef.current.languageCode || "en-US";
     recognition.interimResults = false;
     recognition.continuous = false;
 
@@ -364,6 +375,7 @@ export default function Home() {
         body: JSON.stringify({
           personaName: personaRef.current.name,
           personaRole: personaRef.current.role,
+          personaLanguage: languageLabel(personaRef.current.languageCode || "en-US"),
           // Send the whole conversation so far, not just the latest message,
           // so the persona can remember what was said earlier.
           messages: history.map((m) => ({

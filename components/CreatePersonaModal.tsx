@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Persona, VoiceGender } from "@/lib/personas";
-import { defaultVoiceParams, guessVoiceGenderFromText } from "@/lib/personas";
+import { defaultVoiceParams, guessVoiceGenderFromText, SUPPORTED_LANGUAGES } from "@/lib/personas";
 import { resizeDataUrl } from "@/lib/customPersonas";
 
 export default function CreatePersonaModal({
@@ -12,6 +12,7 @@ export default function CreatePersonaModal({
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [languageCode, setLanguageCode] = useState("en-US");
   const [voiceGender, setVoiceGender] = useState<VoiceGender>("male");
   // Once the user picks a voice themselves, stop overriding it as they keep
   // typing — the auto-guess is only meant to save a step, not fight them.
@@ -56,6 +57,7 @@ export default function CreatePersonaModal({
         role: `an original fictional character described as: ${description.trim()}`,
         images: { closed, smile, talk },
         voiceGender,
+        languageCode,
         ...defaultVoiceParams[voiceGender],
         available: true,
       };
@@ -93,6 +95,20 @@ export default function CreatePersonaModal({
           className="mb-3 w-full resize-none rounded-lg border-2 border-slate-200 px-3 py-2 text-sm text-black outline-none focus:border-sky-400"
         />
 
+        <label className="mb-1 block text-xs font-medium text-slate-600">Language</label>
+        <select
+          value={languageCode}
+          onChange={(e) => setLanguageCode(e.target.value)}
+          disabled={status === "generating"}
+          className="mb-3 w-full rounded-lg border-2 border-slate-200 px-3 py-2 text-sm text-black outline-none focus:border-sky-400"
+        >
+          {SUPPORTED_LANGUAGES.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.label}
+            </option>
+          ))}
+        </select>
+
         <label className="mb-1 block text-xs font-medium text-slate-600">Voice</label>
         <select
           value={voiceGender}
@@ -101,12 +117,17 @@ export default function CreatePersonaModal({
             setVoiceGender(e.target.value as VoiceGender);
           }}
           disabled={status === "generating"}
-          className="mb-4 w-full rounded-lg border-2 border-slate-200 px-3 py-2 text-sm text-black outline-none focus:border-sky-400"
+          className="mb-1 w-full rounded-lg border-2 border-slate-200 px-3 py-2 text-sm text-black outline-none focus:border-sky-400"
         >
           <option value="male">Male voice</option>
           <option value="female">Female voice</option>
           <option value="child">Child voice</option>
         </select>
+        <p className="mb-3 text-[11px] text-slate-400">
+          {languageCode !== "en-US"
+            ? "Voice options depend on what's installed on this device — some languages may only offer one or two voices, even if English has several."
+            : "Voice options depend on what's installed on this device."}
+        </p>
 
         {status === "error" && <p className="mb-3 text-xs text-red-500">{error}</p>}
         {status === "generating" && (

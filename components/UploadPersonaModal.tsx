@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Persona, VoiceGender } from "@/lib/personas";
-import { defaultVoiceParams } from "@/lib/personas";
+import { defaultVoiceParams, SUPPORTED_LANGUAGES } from "@/lib/personas";
 import { fileToDataUrl, resizeDataUrl } from "@/lib/customPersonas";
 import { getVoicesForGender } from "@/lib/voices";
 
@@ -13,6 +13,7 @@ export default function UploadPersonaModal({
 }) {
   const [name, setName] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
+  const [languageCode, setLanguageCode] = useState("en-US");
   const [voiceGender, setVoiceGender] = useState<VoiceGender>("male");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(null);
@@ -20,17 +21,17 @@ export default function UploadPersonaModal({
 
   // getVoices() can return an empty list until the browser's async voice
   // fetch completes (signaled by "voiceschanged") — refresh once that
-  // fires, and again whenever the chosen gender category changes.
+  // fires, and again whenever the chosen language or gender changes.
   useEffect(() => {
     function refresh() {
-      const list = getVoicesForGender(voiceGender);
+      const list = getVoicesForGender(voiceGender, languageCode);
       setVoices(list);
       setSelectedVoiceURI((current) => (current && list.some((v) => v.voiceURI === current) ? current : (list[0]?.voiceURI ?? null)));
     }
     refresh();
     window.speechSynthesis.addEventListener("voiceschanged", refresh);
     return () => window.speechSynthesis.removeEventListener("voiceschanged", refresh);
-  }, [voiceGender]);
+  }, [voiceGender, languageCode]);
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -64,6 +65,7 @@ export default function UploadPersonaModal({
       images: { closed: photo, smile: photo, talk: photo },
       voiceGender,
       voiceURI: selectedVoice?.voiceURI,
+      languageCode,
       ...defaultVoiceParams[voiceGender],
       available: true,
     };
@@ -91,6 +93,19 @@ export default function UploadPersonaModal({
           className="mb-3 w-full rounded-lg border-2 border-slate-200 px-3 py-2 text-sm text-black outline-none focus:border-sky-400"
         />
 
+        <label className="mb-1 block text-xs font-medium text-slate-600">Language</label>
+        <select
+          value={languageCode}
+          onChange={(e) => setLanguageCode(e.target.value)}
+          className="mb-3 w-full rounded-lg border-2 border-slate-200 px-3 py-2 text-sm text-black outline-none focus:border-sky-400"
+        >
+          {SUPPORTED_LANGUAGES.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.label}
+            </option>
+          ))}
+        </select>
+
         <label className="mb-1 block text-xs font-medium text-slate-600">Voice</label>
         <select
           value={voiceGender}
@@ -103,7 +118,7 @@ export default function UploadPersonaModal({
         </select>
 
         <label className="mb-1 block text-xs font-medium text-slate-600">Pick the tone closest to what you want</label>
-        <div className="mb-4 flex max-h-40 flex-col gap-2 overflow-y-auto">
+        <div className="mb-2 flex max-h-40 flex-col gap-2 overflow-y-auto">
           {voices.map((voice, i) => (
             <button
               key={voice.voiceURI}
@@ -121,6 +136,11 @@ export default function UploadPersonaModal({
           ))}
           {voices.length === 0 && <p className="text-xs text-slate-400">Loading voices…</p>}
         </div>
+        <p className="mb-4 text-[11px] text-slate-400">
+          {languageCode !== "en-US"
+            ? "Voice options depend on what's installed on this device — some languages may only offer one or two tones here, even if English has several."
+            : "Voice options depend on what's installed on this device."}
+        </p>
 
         {error && <p className="mb-3 text-xs text-red-500">{error}</p>}
 
