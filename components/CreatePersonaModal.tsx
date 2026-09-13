@@ -103,9 +103,9 @@ export default function CreatePersonaModal({
           disabled={status === "generating"}
           className="mb-4 w-full rounded-lg border-2 border-slate-200 px-3 py-2 text-sm text-black outline-none focus:border-sky-400"
         >
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="child">Child</option>
+          <option value="male">Male voice</option>
+          <option value="female">Female voice</option>
+          <option value="child">Child voice</option>
         </select>
 
         {status === "error" && <p className="mb-3 text-xs text-red-500">{error}</p>}
