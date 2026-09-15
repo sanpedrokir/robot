@@ -7,13 +7,6 @@ import { defaultPersona } from "@/lib/personas";
 
 function languageInstruction(language: string): string {
   if (language === "English") return "";
-  if (language === "Cantonese") {
-    // Left to its own devices, a model told to "reply in Cantonese" often
-    // defaults to Standard Written Chinese (essentially Mandarin phrasing
-    // in Chinese characters) rather than actual colloquial Cantonese
-    // grammar and vocabulary — spell out the difference explicitly.
-    return "Always reply in colloquial spoken Cantonese (using Cantonese-specific words and grammar like 嘅/喺/咁/佢/唔, not Standard Written Chinese/Mandarin phrasing), regardless of what language the user writes in.\n";
-  }
   return `Always reply in ${language}, regardless of what language the user writes in.\n`;
 }
 

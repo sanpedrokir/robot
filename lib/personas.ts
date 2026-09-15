@@ -30,7 +30,6 @@ export const SUPPORTED_LANGUAGES: Language[] = [
   { code: "ja-JP", label: "Japanese" },
   { code: "ko-KR", label: "Korean" },
   { code: "zh-CN", label: "Chinese" },
-  { code: "zh-HK", label: "Cantonese" },
   { code: "hi-IN", label: "Hindi" },
   { code: "ar-SA", label: "Arabic" },
   { code: "ms-MY", label: "Malay" },
