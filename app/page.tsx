@@ -78,8 +78,7 @@ export default function Home() {
   const [mouthOpen, setMouthOpen] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const mouthTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fallbackFlapRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mouthFlapRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Recognition callbacks are created once per listening session and need
   // the up-to-date value, not the one closed over when they were set up —
   // a ref sidesteps that stale-closure problem.
@@ -226,37 +225,35 @@ export default function Home() {
       // per-word) boundaries, and a single long sentence could otherwise
       // go several seconds between events even while speaking normally.
       watchdog = setTimeout(() => {
+        stopFlap();
         setRobotState("idle");
         setMouthOpen(false);
         if (conversationModeRef.current) startListening();
       }, 8000);
     }
 
-    function stopFallbackFlap() {
-      if (fallbackFlapRef.current) {
-        clearInterval(fallbackFlapRef.current);
-        fallbackFlapRef.current = null;
+    function stopFlap() {
+      if (mouthFlapRef.current) {
+        clearInterval(mouthFlapRef.current);
+        mouthFlapRef.current = null;
       }
     }
 
-    // Flap the mouth open briefly on each word/sentence boundary the
-    // browser reports, instead of a fixed CSS animation running non-stop
-    // for the whole speaking duration — this tracks actual speech rhythm
-    // (including natural pauses) rather than a constant mechanical flap.
-    let boundaryFired = false;
+    // Flap the mouth continuously on a fixed interval for the whole
+    // speaking duration, rather than syncing it to onboundary events —
+    // some voices only report boundaries per sentence rather than per
+    // word (Android Chrome and iOS Safari's engines vary; some desktop
+    // voices do this too on long replies), which left the mouth flashing
+    // open once at the start of a long sentence and then sitting closed
+    // for the rest of it. onboundary is still used below, just to reset
+    // the stall watchdog on real progress, not to drive the mouth.
     utterance.onboundary = () => {
-      boundaryFired = true;
-      stopFallbackFlap(); // this browser does support boundary events after all
-      setMouthOpen(true);
-      if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
-      mouthTimerRef.current = setTimeout(() => setMouthOpen(false), 150);
       resetWatchdog();
     };
     utterance.onend = () => {
       clearTimeout(watchdog);
-      stopFallbackFlap();
+      stopFlap();
       setMouthOpen(false);
-      if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       // A happy smile after finishing a reply, before settling back to idle.
       setRobotState("happy");
       timers.current.push(setTimeout(() => setRobotState("idle"), 3500));
@@ -264,31 +261,18 @@ export default function Home() {
     };
     utterance.onerror = () => {
       clearTimeout(watchdog);
-      stopFallbackFlap();
+      stopFlap();
       setRobotState("idle");
       setMouthOpen(false);
-      if (mouthTimerRef.current) clearTimeout(mouthTimerRef.current);
       if (conversationModeRef.current) startListening();
     };
     resetWatchdog(); // arm it up front in case boundary/end never fire at all
 
     function startSpeaking() {
       window.speechSynthesis.speak(utterance);
-      // Some browsers (notably mobile ones — Android Chrome's TTS engine
-      // support varies by device, and iOS Safari often doesn't fire it at
-      // all) never send onboundary events, which would otherwise leave the
-      // mouth permanently closed for the whole reply. If no boundary shows
-      // up shortly after speech starts, fall back to a plain timed flap
-      // instead — less precisely synced, but still moving.
-      timers.current.push(
-        setTimeout(() => {
-          if (!boundaryFired && !fallbackFlapRef.current) {
-            fallbackFlapRef.current = setInterval(() => {
-              setMouthOpen((prev) => !prev);
-            }, 220);
-          }
-        }, 500)
-      );
+      mouthFlapRef.current = setInterval(() => {
+        setMouthOpen((prev) => !prev);
+      }, 220);
     }
 
     // Chrome/Edge often report zero voices on the very first call of a
@@ -392,9 +376,9 @@ export default function Home() {
       recognitionRef.current?.stop();
       window.speechSynthesis?.cancel();
       clearTimers();
-      if (fallbackFlapRef.current) {
-        clearInterval(fallbackFlapRef.current);
-        fallbackFlapRef.current = null;
+      if (mouthFlapRef.current) {
+        clearInterval(mouthFlapRef.current);
+        mouthFlapRef.current = null;
       }
       setMouthOpen(false);
       setRobotState("idle");
