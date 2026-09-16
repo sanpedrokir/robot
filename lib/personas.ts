@@ -53,8 +53,14 @@ export const personas: Persona[] = [
       talk: "/personas/neo/talk.png",
     },
     voiceGender: "male",
-    pitch: 1.15,
-    rate: 1.05,
+    // Noticeably lower/brisker than Elodie's pitch/rate below — on a
+    // device with no real male voice installed, Neo falls back to
+    // literally the same underlying voice as her (see EditVoiceModal's
+    // "No installed male voice found" case), so pitch/rate is the only
+    // thing left to tell them apart. Deliberately more dramatic than a
+    // real male voice would need on its own.
+    pitch: 0.85,
+    rate: 1.1,
     languageCode: "en-US",
     available: true,
   },
@@ -89,7 +95,7 @@ export function isCustomPersonaId(id: string): boolean {
 
 /** Sensible starting pitch/rate per voice gender, used for user-created custom personas. */
 export const defaultVoiceParams: Record<VoiceGender, { pitch: number; rate: number }> = {
-  male: { pitch: 1.15, rate: 1.05 },
+  male: { pitch: 0.85, rate: 1.1 },
   female: { pitch: 1.15, rate: 1.0 },
   child: { pitch: 1.85, rate: 1.25 },
 };
