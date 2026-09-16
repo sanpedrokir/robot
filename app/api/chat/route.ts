@@ -151,9 +151,27 @@ const MAX_TOOL_ROUNDS = 4;
 
 export async function POST(request: Request) {
   try {
-    const { messages, personaName, personaRole, personaLanguage } = await request.json();
+    const { messages: rawMessages, personaName, personaRole, personaLanguage } = await request.json();
 
-    if (!Array.isArray(messages) || messages.length === 0 || !messages.every(isChatTurn)) {
+    if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Request body must include a non-empty 'messages' array of { role: 'user' | 'assistant', content }.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Drop any blank-content turn instead of rejecting the whole request —
+    // a prior assistant reply can legitimately come back empty (e.g. the
+    // model only called a tool with no accompanying text), and that turn
+    // is still sent back as history on the next message. Hard-rejecting
+    // the request whenever one bad turn is present used to brick the rest
+    // of the conversation: every later message also carried that same
+    // poisoned history, so it 400'd forever until the page was reloaded.
+    const messages = rawMessages.filter(isChatTurn);
+    if (messages.length === 0) {
       return NextResponse.json(
         {
           error:
@@ -263,8 +281,17 @@ export async function POST(request: Request) {
       });
     }
 
+    // The model can finish a tool round with no accompanying text (e.g. it
+    // only emitted a function_call and never followed up in later rounds,
+    // or hit MAX_TOOL_ROUNDS mid-call) — never hand back an empty reply:
+    // besides showing a silent chat bubble, that empty turn would become
+    // part of the conversation history sent on the *next* message, and an
+    // empty-content turn used to make the whole next request get rejected
+    // (see the filtering above).
+    const reply = response.output_text?.trim() || "Done!";
+
     return NextResponse.json({
-      reply: response.output_text,
+      reply,
       whatsapp: lastWhatsapp ?? undefined,
       song: lastSong ?? undefined,
     });

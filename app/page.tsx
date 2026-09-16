@@ -412,11 +412,16 @@ export default function Home() {
           personaRole: personaRef.current.role,
           personaLanguage: languageLabel(personaRef.current.languageCode || "en-US"),
           // Send the whole conversation so far, not just the latest message,
-          // so the persona can remember what was said earlier.
-          messages: history.map((m) => ({
-            role: m.sender === "user" ? "user" : "assistant",
-            content: m.text,
-          })),
+          // so the persona can remember what was said earlier. Blank turns
+          // are dropped here too (the server also guards against this) —
+          // a reply can legitimately come back empty, and re-sending that
+          // as history should never be able to break the next message.
+          messages: history
+            .filter((m) => m.text.trim().length > 0)
+            .map((m) => ({
+              role: m.sender === "user" ? "user" : "assistant",
+              content: m.text,
+            })),
         }),
       });
       const data = await res.json();
