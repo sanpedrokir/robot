@@ -43,6 +43,12 @@ const FEMALE_NAMES = [
   "Xiao",
   "HiuMaan",
   "HiuGaai",
+  // Chrome/Chromium's plain default US voice carries no "Female" suffix
+  // at all (unlike its UK counterpart, which comes in explicit
+  // "...Male"/"...Female" variants) but is itself a female voice — without
+  // this it reads as gender-unknown and the male fallback in app/page.tsx
+  // (pickByGender) will happily accept it as a stand-in for "male".
+  "Google US English",
 ];
 
 export function classifyVoiceGender(voice: SpeechSynthesisVoice): "male" | "female" | null {
