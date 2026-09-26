@@ -52,11 +52,17 @@ export default function EditVoiceModal({
   }
 
   function handleSave() {
-    const selectedVoice = voices.find((v) => v.voiceURI === selectedVoiceURI);
+    // Save selectedVoiceURI directly rather than re-deriving it via
+    // voices.find(...): voices can be swapped out from under us by a
+    // voiceschanged-triggered refresh() firing between picking a tone and
+    // hitting Save (mobile TTS engines commonly fire that event late or
+    // more than once while still loading their voice list). A stale find()
+    // here would silently miss and write voiceURI: undefined, wiping out
+    // the tone just picked once it's spread onto the persona.
     onSave({
       languageCode,
       voiceGender,
-      voiceURI: selectedVoice?.voiceURI,
+      voiceURI: selectedVoiceURI ?? undefined,
       pitch: defaultVoiceParams[voiceGender].pitch,
       rate: defaultVoiceParams[voiceGender].rate,
     });
